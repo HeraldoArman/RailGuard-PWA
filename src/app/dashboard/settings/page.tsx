@@ -1,4 +1,7 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
+import { auth } from "@/lib/auth";
 import SettingsPage from "@/modules/settings/ui/views/setting-views";
 // import { headers } from "next/headers";
 // import { auth } from "@/lib/auth";
@@ -10,7 +13,13 @@ import { ErrorBoundary } from "react-error-boundary";
 import { LoaderCircle } from "lucide-react";
 // import DashboardHistory from "@/modules/dashboard/ui/views/dashboard-history";
 const page = async () => {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
   
+    if (!session) {
+      redirect("/sign-in");
+    }
     const queryClient = getQueryClient();
   
     // Prefetch histori kasus (page 1)
