@@ -16,9 +16,10 @@ const inter = Inter({
 // });
 
 export const metadata: Metadata = {
-  title: "RailGuard",
-
+  title: "Next.js PWA",
+  manifest: "/manifest.webmanifest",
 };
+
 
 export default function RootLayout({
   children,
