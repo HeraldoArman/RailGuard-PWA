@@ -10,9 +10,8 @@ const Page = async () => {
 
   if (!!session) {
     redirect("/dashboard");
-  }
-  if (!session){
-    redirect("/sign-in")
+  } else {
+    redirect("/sign-in");
   }
 
   return (

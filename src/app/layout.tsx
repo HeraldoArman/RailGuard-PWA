@@ -20,17 +20,20 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <NuqsAdapter>
       <TRPCReactProvider>
         <html lang="en">
-          <body className={`${inter.className} antialiased`}>
+          <head>
+            <link rel="manifest" href="/manifest.webmanifest" />
+            <meta name="theme-color" content="#000000" />
+          </head>
+          <body>
             <Toaster />
             {children}
           </body>
