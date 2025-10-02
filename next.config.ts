@@ -1,11 +1,8 @@
-// ❌ jangan begini
-// import type { NextConfig } from "next";
-
-// ✅ cukup begini
 import withPWA from "next-pwa";
 
 const nextConfig = {
   /* config options */
+  reactStrictMode: true,
 };
 
 const pwaConfig = withPWA({
@@ -13,7 +10,18 @@ const pwaConfig = withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  runtimeCaching: [
+    {
+      urlPattern: /^https?.*/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'offlineCache',
+        expiration: {
+          maxEntries: 200,
+        },
+      },
+    },
+  ],
 });
 
-// tanpa typing strict
 export default pwaConfig(nextConfig);

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
@@ -16,8 +16,25 @@ const inter = Inter({
 // });
 
 export const metadata: Metadata = {
-  title: "Next.js PWA",
-  manifest: "/manifest.webmanifest",
+  title: "RailGuard PWA",
+  description: "A Progressive Web App for railway safety",
+  generator: "Next.js",
+  manifest: "/manifest.json",
+  keywords: ["nextjs", "pwa", "railway"],
+  authors: [{ name: "Your Name" }],
+  icons: [
+    { rel: "apple-touch-icon", url: "/icon-128x128.png" },
+    { rel: "icon", url: "/icon-128x128.png" },
+  ],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1976d2",
+  colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -31,7 +48,14 @@ export default function RootLayout({
         <html lang="en">
           <head>
             <link rel="manifest" href="/manifest.webmanifest" />
-            <meta name="theme-color" content="#000000" />
+
+            <meta name="apple-mobile-web-app-capable" content="yes" />
+            <meta
+              name="apple-mobile-web-app-status-bar-style"
+              content="default"
+            />
+            <meta name="apple-mobile-web-app-title" content="RailGuard" />
+            <meta name="mobile-web-app-capable" content="yes" />
           </head>
           <body>
             <Toaster />
