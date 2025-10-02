@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'RailGuard PWA',
     short_name: 'RailGuard',
     description: 'A Progressive Web App for railway safety and monitoring',
-    start_url: '/',
+    start_url: '/sign-in',
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#1976d2', // Use your brand color
