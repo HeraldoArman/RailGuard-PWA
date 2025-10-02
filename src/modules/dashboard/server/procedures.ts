@@ -341,7 +341,23 @@ export const krlRouter = createTRPCRouter({
          .where(eq(userKrl.userId, ctx.userId.user.id))
          .groupBy(krl.id, gerbong.id);
 
-       const map = new Map<Unknown>();
+      const map = new Map<string, {
+        krlId: string;
+        krlName: string;
+        totalGerbong: number;
+        normalGerbong: number;
+        problematicGerbong: number;
+        resolvedGerbong: number;
+        gerbong: Array<{
+          id: string;
+          name: string;
+          totalKasus: number;
+          belum: number;
+          proses: number;
+          selesai: number;
+          statusKepadatan: string | null;
+        }>;
+      }>();
 
        for (const r of rows) {
          if (!map.has(r.krlId)) {
