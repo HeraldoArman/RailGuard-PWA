@@ -1,7 +1,19 @@
-import type { NextConfig } from "next";
+// ❌ jangan begini
+// import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
+// ✅ cukup begini
+import withPWA from "next-pwa";
+
+const nextConfig = {
+  /* config options */
 };
 
-export default nextConfig;
+const pwaConfig = withPWA({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
+
+// tanpa typing strict
+export default pwaConfig(nextConfig);
