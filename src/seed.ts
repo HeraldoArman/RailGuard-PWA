@@ -87,7 +87,7 @@ async function main() {
           krlId: krlRedId,
           adaKasus: true,
           totalPenumpang: 120,
-          statusKepadatan: "Padat",
+          statusKepadatan: "padat", // lowercase to match enum
         },
         {
           id: g2,
@@ -95,7 +95,7 @@ async function main() {
           krlId: krlRedId,
           adaKasus: false,
           totalPenumpang: 70,
-          statusKepadatan: "Sedang",
+          statusKepadatan: "sedang", // lowercase to match enum
         },
         {
           id: g3,
@@ -103,7 +103,7 @@ async function main() {
           krlId: krlBlueId,
           adaKasus: false,
           totalPenumpang: 45,
-          statusKepadatan: "Longgar",
+          statusKepadatan: "longgar", // lowercase to match enum
         },
         {
           id: g4,
@@ -111,8 +111,8 @@ async function main() {
           krlId: krlBlueId,
           adaKasus: true,
           totalPenumpang: 95,
-          statusKepadatan: "Sedang",
-        },
+          statusKepadatan: "sedang", // lowercase to match enum
+        }
       ])
       .onConflictDoNothing();
 
@@ -130,9 +130,9 @@ async function main() {
           description:
             "Laporan pelecehan verbal antar penumpang di dekat pintu masuk.",
           status: "proses",
-          occupancyLabel: "Padat",
+          occupancyLabel: "padat", // lowercase to match enum
           occupancyValue: 85,
-          caseType: "keamanan",
+          caseType: "pelecehan", // use valid enum value
           gerbongId: g1,
           handlerId: satpamId,
         },
@@ -143,9 +143,9 @@ async function main() {
           description:
             "Penumpang menumpuk di area tengah gerbong, aliran keluar masuk terganggu.",
           status: "belum_ditangani",
-          occupancyLabel: "Sedang",
+          occupancyLabel: "sedang", // lowercase to match enum
           occupancyValue: 65,
-          caseType: "kepadatan",
+          caseType: "kepadatan", // valid enum value
           gerbongId: g4,
           handlerId: null,
         },
@@ -156,12 +156,11 @@ async function main() {
     await tx
       .insert(userKrl)
       .values([
-        { userId: "OwgEJMCo8CR5BsINDK6lLY5Qc75vPYOZ", krlId: krlRedId},
-        // { userId: satpamId, krlId: krlRedId},
-        // { userId: memberId, krlId: krlRedId},
-
-        // { userId: adminId, krlId: krlBlueId},
-        // { userId: memberId, krlId: krlBlueId },
+        { userId: adminId, krlId: krlRedId},
+        { userId: satpamId, krlId: krlRedId},
+        { userId: memberId, krlId: krlRedId},
+        { userId: adminId, krlId: krlBlueId},
+        { userId: memberId, krlId: krlBlueId },
       ])
       .onConflictDoNothing();
 

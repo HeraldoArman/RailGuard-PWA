@@ -14,7 +14,7 @@ interface Props {
 export const DashboardCommand = ({ open, setOpen }: Props) => {
   return (
     <CommandResponsiveDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Find a meeting" />
+      <CommandInput placeholder="Find a History" />
       <CommandList>
         <CommandItem>Test</CommandItem>
       </CommandList>

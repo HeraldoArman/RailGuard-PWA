@@ -1,0 +1,48 @@
+// ...existing code...
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import React, { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getQueryClient, trpc } from "@/trpc/server";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { ErrorBoundary } from "react-error-boundary";
+import { LoaderCircle } from "lucide-react";
+import DashboardHistory from "@/modules/dashboard/ui/views/dashboard-history";
+
+const page = async () => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  const queryClient = getQueryClient();
+
+  // Prefetch histori kasus (page 1)
+  await queryClient.prefetchQuery(
+    trpc.kasus.getMany.queryOptions({ page: 1, pageSize: 50 })
+  );
+
+  return (
+    <div className="p-8 flex-col flex gap-8">
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-8">
+              <LoaderCircle className="animate-spin text-blue-600 size-8" />
+            </div>
+          }
+        >
+          <ErrorBoundary fallback={<div>Error loading history</div>}>
+            <DashboardHistory />
+          </ErrorBoundary>
+        </Suspense>
+      </HydrationBoundary>
+    </div>
+  );
+};
+
+export default page;
+// ...existing code...

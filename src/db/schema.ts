@@ -1,13 +1,42 @@
-
 import {
   pgTable,
   text,
   timestamp,
   boolean,
   pgEnum,
-  integer,primaryKey
+  integer,
+  primaryKey,
+  uniqueIndex,
+  index,
+  smallint,
+  real,
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
+
+
+export const caseTypeEnum = pgEnum("case_type", [
+  "pelecehan",
+  "prioritas",
+  "pencopetan",
+  "keamanan",
+  "keributan",
+  "darurat",
+  "lainnya",
+  "kepadatan"
+]);
+
+export const kepadatanEnum = pgEnum("kepadatan_label", [
+  "longgar",
+  "sedang",
+  "padat",
+]);
+
+export const caseSourceEnum = pgEnum("case_source", [
+  "ml",
+  "manual",
+  "pelapor",
+  "sensor",
+]);
 
 export const satpamStatusEnum = pgEnum("satpam_status", [
   "belum_ditangani", // belum ada penanganan
@@ -74,63 +103,111 @@ export const verification = pgTable("verification", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+export const krl = pgTable(
+  "krl",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => ({
+    ixKrlName: uniqueIndex("ux_krl_name").on(t.name),
+  })
+);
 
-export const krl = pgTable("krl", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => nanoid()),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
-
-export const gerbong = pgTable("gerbong", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => nanoid()),
-  name: text("name").notNull(),
-  krlId: text("krl_id")
-    .notNull()
-    .references(() => krl.id, { onDelete: "cascade" }),
-  adaKasus: boolean("ada_kasus").default(false).notNull(),
-  totalPenumpang: integer("total_penumpang").default(0),
-  statusKepadatan: text("status_kepadatan"), // misal: "Padat", "Longgar"
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
-
-export const kasus = pgTable("kasus", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => nanoid()),
-  name: text("name").notNull(), // nama kasus
-  images: text("images").array(), // optional: daftar URL gambar
-  description: text("description").notNull(),
-  status: satpamStatusEnum("status").default("belum_ditangani").notNull(),
-  occupancyLabel: text("occupancy_label"), // teks kepadatan (misal: "Padat", "Longgar")
-  occupancyValue: integer("occupancy_value"), // angka (persentase atau jumlah)
-  caseType: text("case_type"),
-  reportedAt: timestamp("reported_at").defaultNow().notNull(),
-  gerbongId: text("gerbong_id")
-    .notNull()
-    .references(() => gerbong.id, { onDelete: "cascade" }),
-  handlerId: text("handler_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+export const gerbong = pgTable(
+  "gerbong",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    name: text("name").notNull(), // contoh: "Gerbong 1"
+    krlId: text("krl_id")
+      .notNull()
+      .references(() => krl.id, { onDelete: "cascade" }),
+    adaKasus: boolean("ada_kasus").default(false).notNull(),
+    totalPenumpang: integer("total_penumpang").default(0),
+    statusKepadatan: kepadatanEnum("status_kepadatan"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => ({
+    uxGerbongPerKrl: uniqueIndex("ux_gerbong_per_krl").on(t.krlId, t.name),
+    ixKrlId: index("ix_gerbong_krl_id").on(t.krlId),
+  })
+);
 
 
+
+export const kasus = pgTable(
+  "kasus",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    name: text("name").notNull(),
+    images: text("images").array(), // boleh, tapi pertimbangkan tabel media terpisah
+    description: text("description").notNull(),
+    status: satpamStatusEnum("status").default("belum_ditangani").notNull(),
+
+    caseType: caseTypeEnum("case_type").default("lainnya"),
+
+    source: caseSourceEnum("source").default("ml").notNull(),
+
+
+    occupancyLabel: kepadatanEnum("occupancy_label"),
+    occupancyValue: integer("occupancy_value"),
+
+    reportedAt: timestamp("reported_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    arrivedAt: timestamp("arrived_at", { withTimezone: true }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNotes: text("resolution_notes"),
+
+    gerbongId: text("gerbong_id")
+      .notNull()
+      .references(() => gerbong.id, { onDelete: "cascade" }),
+
+
+    handlerId: text("handler_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    reportedById: text("reported_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => ({
+    ixKasusGerbongStatus: index("ix_kasus_gerbong_status").on(
+      t.gerbongId,
+      t.status
+    ),
+    ixKasusReportedAt: index("ix_kasus_reported_at").on(t.reportedAt),
+
+  })
+);
 export const userKrl = pgTable(
   "user_krl",
   {
@@ -140,10 +217,16 @@ export const userKrl = pgTable(
     krlId: text("krl_id")
       .notNull()
       .references(() => krl.id, { onDelete: "cascade" }),
-
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    role: text("role").default("satpam").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    assignedFrom: timestamp("assigned_from", { withTimezone: true }),
+    assignedUntil: timestamp("assigned_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.krlId] }),
-  }),
+    ixKrlUsers: index("ix_user_krl_krl").on(t.krlId),
+  })
 );

@@ -41,7 +41,12 @@ export const DashboardUserButton = () => {
   if (isPending || !data?.user) {
     return null;
   }
-
+  const initials = data.user.name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   if (isMobile) {
     return (
       <Drawer>
@@ -52,11 +57,9 @@ export const DashboardUserButton = () => {
             </Avatar>
           ) : (
             <Avatar>
-              <AvatarImage
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  data.user.name || "User"
-                )}&background=random&size=128`}
-              />
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                  {initials}
+                </div>
             </Avatar>
           )}
           <div className="flex flex-col gap-0.5 text-left overflow-hidden flex-1 min-w-0">
@@ -89,13 +92,12 @@ export const DashboardUserButton = () => {
             <AvatarImage src={data.user.image} />
           </Avatar>
         ) : (
-            <Avatar>
-              <AvatarImage
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  data.user.name || "User"
-                )}&background=random&size=128`}
-              />
-            </Avatar>
+          <Avatar>
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+            {initials}
+          </div>
+      </Avatar>
+
         )}
         <div className="flex flex-col gap-0.5 text-left overflow-hidden flex-1 min-w-0">
           <p className="text-sm truncate w-full">{data.user.name}</p>

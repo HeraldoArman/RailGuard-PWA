@@ -12,21 +12,21 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import Image from "next/image";
-import { History, OctagonAlert, Settings } from "lucide-react";
+import { History, OctagonAlert, Settings, Monitor } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { DashboardUserButton } from "./dashboard-user-button";
 const Section = [
   {
-    icon: OctagonAlert,
-    label: "Peringatan",
-    href: "/dashboard/peringatan",
+    icon: Monitor,
+    label: "Monitor",
+    href: "/dashboard",
   },
   {
     icon: History,
     label: "Histori",
-    href: "/dashboard/historu",
+    href: "/dashboard/histori",
   },
   {
     icon: Settings,
