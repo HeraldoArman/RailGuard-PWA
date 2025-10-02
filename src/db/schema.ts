@@ -1,4 +1,20 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { create } from "domain";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  pgEnum,
+  integer,
+} from "drizzle-orm/pg-core";
+import { nanoid } from "nanoid";
+import { handler } from "next/dist/build/templates/app-page";
+
+export const satpamStatusEnum = pgEnum("satpam_status", [
+  "belum_ditangani", // belum ada penanganan
+  "proses", // dalam progress
+  "selesai", // diselesaikan
+]);
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -53,6 +69,61 @@ export const verification = pgTable("verification", {
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const krl = pgTable("krl", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => nanoid()),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const gerbong = pgTable("gerbong", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => nanoid()),
+  name: text("name").notNull(),
+  krlId: text("krl_id")
+    .notNull()
+    .references(() => krl.id, { onDelete: "cascade" }),
+  adaKasus: boolean("ada_kasus").default(false).notNull(),
+  totalPenumpang: integer("total_penumpang").default(0),
+  statusKepadatan: text("status_kepadatan"), // misal: "Padat", "Longgar"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const kasus = pgTable("kasus", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => nanoid()),
+  name: text("name").notNull(), // nama kasus
+  images: text("images").array(), // optional: daftar URL gambar
+  description: text("description").notNull(),
+  status: satpamStatusEnum("status").default("belum_ditangani").notNull(),
+  occupancyLabel: text("occupancy_label"), // teks kepadatan (misal: "Padat", "Longgar")
+  occupancyValue: integer("occupancy_value"), // angka (persentase atau jumlah)
+  caseType: text("case_type"),
+  reportedAt: timestamp("reported_at").defaultNow().notNull(),
+  gerbongId: text("gerbong_id")
+    .notNull()
+    .references(() => gerbong.id, { onDelete: "cascade" }),
+  handlerId: text("handler_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

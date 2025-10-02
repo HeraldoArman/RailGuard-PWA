@@ -1,13 +1,13 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import React from "react";
+import React, { Suspense } from "react";
 import { redirect } from "next/navigation";
-
 import { getQueryClient, trpc } from "@/trpc/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { LoaderCircle } from "lucide-react";
+import { DashboardView } from "@/modules/dashboard/ui/views/dashboard-views";
+
 const page = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -18,6 +18,22 @@ const page = async () => {
   }
 
   const queryClient = getQueryClient();
+
+  // Prefetch needed dashboard queries
+  await Promise.all([
+    queryClient.prefetchQuery(trpc.gerbong.summary.queryOptions()),
+    queryClient.prefetchQuery(
+      trpc.gerbong.getMany.queryOptions({ page: 1, pageSize: 10 })
+    ),
+    // Add more prefetches if needed:
+    queryClient.prefetchQuery(trpc.gerbong.getBySatpamStatus.queryOptions({ status: "belum_ditangani" })),
+    queryClient.prefetchQuery(trpc.gerbong.getBySatpamStatus.queryOptions({ status: "proses" })),
+    queryClient.prefetchQuery(trpc.gerbong.getBySatpamStatus.queryOptions({ status: "selesai" })),
+    queryClient.prefetchQuery(
+      trpc.gerbong.getByUser.queryOptions({ userId: session.user.id })
+    ),
+    
+  ]);
 
   return (
     <div className="p-8 flex-col flex gap-8">
@@ -30,9 +46,10 @@ const page = async () => {
           }
         >
           <ErrorBoundary fallback={<div>Error loading analytics</div>}>
-            <div>Analytics Component</div>
+            <DashboardView />
           </ErrorBoundary>
         </Suspense>
+
         <Suspense
           fallback={
             <div className="flex items-center justify-center py-8">
@@ -48,4 +65,5 @@ const page = async () => {
     </div>
   );
 };
+
 export default page;

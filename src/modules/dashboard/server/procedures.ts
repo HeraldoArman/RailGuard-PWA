@@ -1,0 +1,319 @@
+import {
+    createTRPCRouter,
+    baseProcedure,
+    protectedProcedure,
+  } from "@/trpc/init";
+  import { db } from "@/db";
+  import { gerbong, kasus, krl, user } from "@/db/schema";
+  import { z } from "zod";
+  import {
+    and,
+    count,
+    desc,
+    eq,
+    getTableColumns,
+    ilike,
+    inArray,
+    sql,
+    isNull,
+  } from "drizzle-orm";
+  import { TRPCError } from "@trpc/server";
+  
+  // Konstanta pagination (sesuaikan jika beda path)
+  const DEFAULT_PAGE = 1;
+  const DEFAULT_PAGE_SIZE = 10;
+  const MIN_PAGE_SIZE = 1;
+  const MAX_PAGE_SIZE = 100;
+  
+  const satpamStatusValues = ["belum_ditangani", "proses", "selesai"] as const;
+  type SatpamStatus = (typeof satpamStatusValues)[number];
+  
+  const caseTypeValues = [
+    "pelecehan",
+    "berisik",
+    "prioritas_tidak_dapat_duduk",
+    "lainnya",
+  ] as const;
+  type CaseType = (typeof caseTypeValues)[number];
+  
+  // ================= GERBONG ROUTER =================
+  export const gerbongRouter = createTRPCRouter({
+    getMany: baseProcedure
+      .input(
+        z.object({
+          page: z.number().default(DEFAULT_PAGE),
+          pageSize: z
+            .number()
+            .min(MIN_PAGE_SIZE)
+            .max(MAX_PAGE_SIZE)
+            .default(DEFAULT_PAGE_SIZE),
+          search: z.string().optional(),
+          krlId: z.string().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { page, pageSize, search, krlId } = input;
+  
+        const whereClauses = [
+          krlId ? eq(gerbong.krlId, krlId) : undefined,
+          search
+            ? ilike(
+                gerbong.name,
+                `%${search}%`,
+              )
+            : undefined,
+        ].filter(Boolean);
+  
+        const data = await db
+          .select({
+            ...getTableColumns(gerbong),
+            krlName: krl.name,
+            totalKasus: sql<number>`count(${kasus.id})`,
+            belum: sql<number>`sum(case when ${kasus.status} = 'belum_ditangani' then 1 else 0 end)`,
+            proses: sql<number>`sum(case when ${kasus.status} = 'proses' then 1 else 0 end)`,
+            selesai: sql<number>`sum(case when ${kasus.status} = 'selesai' then 1 else 0 end)`,
+          })
+          .from(gerbong)
+          .leftJoin(krl, eq(gerbong.krlId, krl.id))
+          .leftJoin(kasus, eq(kasus.gerbongId, gerbong.id))
+          .where(
+            and(...(whereClauses as import("drizzle-orm").SQLWrapper[])),
+          )
+          .groupBy(gerbong.id, krl.id)
+          .orderBy(desc(gerbong.createdAt ?? gerbong.id), gerbong.name)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize);
+  
+        // Total distinct gerbong matching filter
+        const totalQuery = await db
+          .select({ count: count() })
+          .from(gerbong)
+          .where(
+            and(...(whereClauses as import("drizzle-orm").SQLWrapper[])),
+          );
+        const total = totalQuery[0]?.count ?? 0;
+        const totalPages = Math.ceil(total / pageSize);
+  
+        return { items: data, total, totalPages };
+      }),
+  
+    getOne: baseProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const [row] = await db
+          .select({
+            ...getTableColumns(gerbong),
+            krlName: krl.name,
+            totalKasus: sql<number>`count(${kasus.id})`,
+            belum: sql<number>`sum(case when ${kasus.status} = 'belum_ditangani' then 1 else 0 end)`,
+            proses: sql<number>`sum(case when ${kasus.status} = 'proses' then 1 else 0 end)`,
+            selesai: sql<number>`sum(case when ${kasus.status} = 'selesai' then 1 else 0 end)`,
+          })
+          .from(gerbong)
+          .leftJoin(krl, eq(gerbong.krlId, krl.id))
+          .leftJoin(kasus, eq(kasus.gerbongId, gerbong.id))
+          .where(eq(gerbong.id, input.id))
+          .groupBy(gerbong.id, krl.id)
+          .limit(1);
+  
+        if (!row) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Gerbong not found" });
+        }
+        return row;
+      }),
+  
+    getBySatpamStatus: baseProcedure
+      .input(
+        z.object({
+          status: z.enum(satpamStatusValues),
+        }),
+      )
+      .query(async ({ input }) => {
+        const rows = await db
+          .selectDistinctOn([gerbong.id], {
+            ...getTableColumns(gerbong),
+            krlName: krl.name,
+          })
+          .from(gerbong)
+          .innerJoin(kasus, eq(kasus.gerbongId, gerbong.id))
+          .leftJoin(krl, eq(gerbong.krlId, krl.id))
+          .where(eq(kasus.status, input.status))
+          .orderBy(gerbong.id);
+        return rows;
+      }),
+  
+    getByUser: protectedProcedure
+      .input(
+        z.object({
+          userId: z.string().optional(), // jika tidak diisi gunakan ctx
+        }),
+      )
+      .query(async ({ input, ctx }) => {
+        const targetUserId = input.userId ?? ctx.userId.user.id;
+        const rows = await db
+          .selectDistinctOn([gerbong.id], {
+            ...getTableColumns(gerbong),
+          })
+          .from(kasus)
+          .innerJoin(gerbong, eq(kasus.gerbongId, gerbong.id))
+          .where(eq(kasus.handlerId, targetUserId));
+        return rows;
+      }),
+  
+    // Opsional: statistik ringkas (total gerbong & breakdown global)
+    summary: baseProcedure.query(async () => {
+      const [agg] = await db
+        .select({
+          totalGerbong: count(gerbong.id),
+          totalKasus: sql<number>`count(${kasus.id})`,
+          belum: sql<number>`sum(case when ${kasus.status} = 'belum_ditangani' then 1 else 0 end)`,
+          proses: sql<number>`sum(case when ${kasus.status} = 'proses' then 1 else 0 end)`,
+          selesai: sql<number>`sum(case when ${kasus.status} = 'selesai' then 1 else 0 end)`,
+        })
+        .from(gerbong)
+        .leftJoin(kasus, eq(kasus.gerbongId, gerbong.id));
+      return agg;
+    }),
+  });
+  
+  // ================= KASUS ROUTER =================
+  export const kasusRouter = createTRPCRouter({
+    getManyByGerbong: baseProcedure
+      .input(
+        z.object({
+          gerbongId: z.string(),
+          page: z.number().default(DEFAULT_PAGE),
+          pageSize: z
+            .number()
+            .min(MIN_PAGE_SIZE)
+            .max(MAX_PAGE_SIZE)
+            .default(DEFAULT_PAGE_SIZE),
+          status: z.enum(satpamStatusValues).optional(),
+          caseTypes: z.array(z.enum(caseTypeValues)).optional(),
+          search: z.string().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const {
+          gerbongId,
+          page,
+          pageSize,
+          status,
+          caseTypes,
+          search,
+        } = input;
+  
+        const whereParts = [
+          eq(kasus.gerbongId, gerbongId),
+          status ? eq(kasus.status, status) : undefined,
+          caseTypes?.length ? inArray(kasus.caseType, caseTypes) : undefined,
+          search
+            ? ilike(
+                kasus.description,
+                `%${search}%`,
+              )
+            : undefined,
+        ].filter(Boolean);
+  
+        const items = await db
+          .select({
+            ...getTableColumns(kasus),
+          })
+          .from(kasus)
+          .where(and(...(whereParts as [import("drizzle-orm").SQLWrapper, ...import("drizzle-orm").SQLWrapper[]] | [])))
+          .orderBy(desc(kasus.reportedAt), desc(kasus.id))
+          .limit(pageSize)
+          .offset((page - 1) * pageSize);
+  
+        const [totalRow] = await db
+          .select({ count: count() })
+          .from(kasus)
+          .where(and(...(whereParts as [import("drizzle-orm").SQLWrapper, ...import("drizzle-orm").SQLWrapper[]] | [])));
+  
+        const total = totalRow?.count ?? 0;
+        const totalPages = Math.ceil(total / pageSize);
+  
+        return { items, total, totalPages };
+      }),
+  
+    getOne: baseProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const [row] = await db
+          .select({
+            ...getTableColumns(kasus),
+          })
+          .from(kasus)
+          .where(eq(kasus.id, input.id))
+          .limit(1);
+        if (!row) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Kasus not found" });
+        }
+        return row;
+      }),
+  
+    create: protectedProcedure
+      .input(
+        z.object({
+          gerbongId: z.string(),
+          name: z.string(),
+          description: z.string(),
+          caseType: z.enum(caseTypeValues).default("lainnya"),
+          occupancyLabel: z.string().optional(),
+          occupancyValue: z.number().int().optional(),
+          images: z.array(z.string().url()).optional(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const [created] = await db
+          .insert(kasus)
+          .values({
+            gerbongId: input.gerbongId,
+            name: input.name,
+            description: input.description,
+            caseType: input.caseType,
+            occupancyLabel: input.occupancyLabel,
+            occupancyValue: input.occupancyValue,
+            images: input.images,
+          })
+          .returning();
+        return created;
+      }),
+  
+    updateStatus: protectedProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          status: z.enum(satpamStatusValues),
+          handlerId: z.string().optional(),
+        }),
+      )
+      .mutation(async ({ input, ctx }) => {
+        const handlerId = input.handlerId ?? ctx.userId.user.id;
+        const [updated] = await db
+          .update(kasus)
+          .set({
+            status: input.status,
+            handlerId,
+          })
+          .where(eq(kasus.id, input.id))
+          .returning();
+        if (!updated) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Kasus not found" });
+        }
+        return updated;
+      }),
+  
+    remove: protectedProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const [removed] = await db
+          .delete(kasus)
+          .where(eq(kasus.id, input.id))
+          .returning();
+        if (!removed) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Kasus not found" });
+        }
+        return removed;
+      }),
+  });

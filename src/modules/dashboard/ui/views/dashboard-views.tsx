@@ -1,7 +1,10 @@
 import React from 'react'
+import DashboardAnalytics from './dashboard-analytics'
 
 export const DashboardView = () => {
   return (
-    <div>DashboardView</div>
+    <div>
+      <DashboardAnalytics />
+    </div>
   )
 }
