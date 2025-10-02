@@ -50,7 +50,7 @@ export const DashboardHistory = () => {
       : "-";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-end justify-between gap-2">
         <h3 className="text-xl font-semibold tracking-tight">
           Histori Kasus{" "}

@@ -36,7 +36,7 @@ const page = async () => {
   ]);
 
   return (
-    <div className="p-8 flex-col flex gap-8">
+    <div className="flex-col flex ">
       <HydrationBoundary state={dehydrate(queryClient)}>
         <Suspense
           fallback={
