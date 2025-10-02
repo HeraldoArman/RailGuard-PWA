@@ -4,7 +4,7 @@ import {
     protectedProcedure,
   } from "@/trpc/init";
   import { db } from "@/db";
-  import { gerbong, kasus, krl, user } from "@/db/schema";
+  import { gerbong, kasus, krl, user, userKrl } from "@/db/schema";
   import { z } from "zod";
   import {
     and,
@@ -34,7 +34,7 @@ import {
     "prioritas_tidak_dapat_duduk",
     "lainnya",
   ] as const;
-  type CaseType = (typeof caseTypeValues)[number];
+  // type CaseType = (typeof caseTypeValues)[number];
   
   // ================= GERBONG ROUTER =================
   export const gerbongRouter = createTRPCRouter({
@@ -317,3 +317,67 @@ import {
         return removed;
       }),
   });
+
+
+export const krlRouter = createTRPCRouter({
+  getGerbongSummaryByUser: protectedProcedure
+     .query(async ({ ctx }) => {
+       const rows = await db
+         .select({
+           krlId: krl.id,
+           krlName: krl.name,
+           gerbongId: gerbong.id,
+           gerbongName: gerbong.name,
+           totalKasus: sql<number>`count(${kasus.id})`,
+           belum: sql<number>`sum(case when ${kasus.status} = 'belum_ditangani' then 1 else 0 end)`,
+           proses: sql<number>`sum(case when ${kasus.status} = 'proses' then 1 else 0 end)`,
+           selesai: sql<number>`sum(case when ${kasus.status} = 'selesai' then 1 else 0 end)`,
+          statusKepadatan: gerbong.statusKepadatan,
+         })
+         .from(userKrl)
+         .innerJoin(krl, eq(userKrl.krlId, krl.id))
+         .innerJoin(gerbong, eq(gerbong.krlId, krl.id))
+         .leftJoin(kasus, eq(kasus.gerbongId, gerbong.id))
+         .where(eq(userKrl.userId, ctx.userId.user.id))
+         .groupBy(krl.id, gerbong.id);
+
+       const map = new Map<Unknown>();
+
+       for (const r of rows) {
+         if (!map.has(r.krlId)) {
+           map.set(r.krlId, {
+             krlId: r.krlId,
+             krlName: r.krlName,
+             totalGerbong: 0,
+             normalGerbong: 0,
+             problematicGerbong: 0,
+             resolvedGerbong: 0,
+             gerbong: [],
+           });
+         }
+         const bucket = map.get(r.krlId)!;
+         bucket.totalGerbong += 1;
+
+         const gerbongNormal = r.totalKasus === 0;
+         const gerbongProblematic = (r.belum ?? 0) > 0 || (r.proses ?? 0) > 0;
+         const gerbongResolved = r.totalKasus > 0 && r.totalKasus === (r.selesai ?? 0);
+
+         if (gerbongNormal) bucket.normalGerbong += 1;
+         else if (gerbongProblematic) bucket.problematicGerbong += 1;
+         else if (gerbongResolved) bucket.resolvedGerbong += 1;
+
+         bucket.gerbong.push({
+           id: r.gerbongId,
+           name: r.gerbongName,
+           totalKasus: r.totalKasus,
+           belum: r.belum ?? 0,
+           proses: r.proses ?? 0,
+           selesai: r.selesai ?? 0,
+          statusKepadatan: r.statusKepadatan ?? null,
+         });
+       }
+
+       return Array.from(map.values());
+     }),
+ 
+});

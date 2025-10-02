@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import Image from "next/image";
-import { GraduationCap, OctagonAlert, Bell } from "lucide-react";
+import { History, OctagonAlert, Settings } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
@@ -24,9 +24,14 @@ const Section = [
     href: "/dashboard/peringatan",
   },
   {
-    icon: Bell,
-    label: "Notifikasi",
-    href: "/dashboard/notifikasi",
+    icon: History,
+    label: "Histori",
+    href: "/dashboard/historu",
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    href: "/dashboard/settings",
   },
 ];
 

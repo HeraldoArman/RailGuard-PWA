@@ -6,7 +6,7 @@ import { getQueryClient, trpc } from "@/trpc/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
 import { LoaderCircle } from "lucide-react";
-import { DashboardView } from "@/modules/dashboard/ui/views/dashboard-views";
+import { DashboardViews } from "@/modules/dashboard/ui/views/dashboard-views";
 
 const page = async () => {
   const session = await auth.api.getSession({
@@ -32,7 +32,7 @@ const page = async () => {
     queryClient.prefetchQuery(
       trpc.gerbong.getByUser.queryOptions({ userId: session.user.id })
     ),
-    
+    queryClient.prefetchQuery(trpc.krl.getGerbongSummaryByUser.queryOptions()),
   ]);
 
   return (
@@ -46,21 +46,10 @@ const page = async () => {
           }
         >
           <ErrorBoundary fallback={<div>Error loading analytics</div>}>
-            <DashboardView />
+            <DashboardViews />
           </ErrorBoundary>
         </Suspense>
 
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-8">
-              <LoaderCircle className="animate-spin text-blue-600 size-8" />
-            </div>
-          }
-        >
-          <ErrorBoundary fallback={<div>Error loading quick access</div>}>
-            <div>Quick Access Component</div>
-          </ErrorBoundary>
-        </Suspense>
       </HydrationBoundary>
     </div>
   );

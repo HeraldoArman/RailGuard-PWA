@@ -48,6 +48,9 @@ export type KasusUpdateStatusInput = RouterInputs["kasus"]["updateStatus"];
 export type KasusRemoveResult = RouterOutputs["kasus"]["remove"];
 export type KasusRemoveInput = RouterInputs["kasus"]["remove"];
 
+
+export type KrlGerbongSummaryList = RouterOutputs["krl"]["getGerbongSummaryByUser"];
+export type KrlGerbongSummaryItem = KrlGerbongSummaryList[number];
 // Convenience aggregated dashboard metrics (example usage)
 export interface DashboardMetrics {
   totalGerbong: number;

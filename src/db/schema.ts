@@ -1,14 +1,13 @@
-import { create } from "domain";
+
 import {
   pgTable,
   text,
   timestamp,
   boolean,
   pgEnum,
-  integer,
+  integer,primaryKey
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
-import { handler } from "next/dist/build/templates/app-page";
 
 export const satpamStatusEnum = pgEnum("satpam_status", [
   "belum_ditangani", // belum ada penanganan
@@ -130,3 +129,21 @@ export const kasus = pgTable("kasus", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+
+export const userKrl = pgTable(
+  "user_krl",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    krlId: text("krl_id")
+      .notNull()
+      .references(() => krl.id, { onDelete: "cascade" }),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.krlId] }),
+  }),
+);

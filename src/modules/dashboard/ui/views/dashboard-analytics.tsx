@@ -63,7 +63,7 @@ export default function DashboardAnalytics() {
             key={i}
             className="group relative overflow-hidden border-0 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           >
-            <CardContent className="flex flex-col justify-between py-3 px-3 h-full">
+            <CardContent className="flex flex-col justify-between py-1 px-3 h-full">
               <div className="flex items-center justify-between w-full mb-2">
                 <div className="text-2xl md:text-4xl font-bold tracking-tight">
                   {card.value}
