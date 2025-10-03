@@ -30,6 +30,7 @@ interface CustomSpeechRecognition extends EventTarget {
   onresult: ((event: CustomSpeechRecognitionEvent) => void) | null;
   onerror: ((event: any) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
   start(): void;
   stop(): void;
   abort(): void;
@@ -77,7 +78,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-  
+
     if (!SpeechRecognition) {
       console.error("Browser tidak support SpeechRecognition API");
     } else {
@@ -101,18 +102,24 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const speak = (text: string, lang = "id-ID") => {
-    try { window.speechSynthesis.cancel(); } catch {}
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
     const voice = voicesReady
-      ? voices.find((v) => v.lang === lang) ?? voices.find((v) => v.lang.startsWith(lang.split("-")[0]))
+      ? (voices.find((v) => v.lang === lang) ??
+        voices.find((v) => v.lang.startsWith(lang.split("-")[0])))
       : undefined;
     tts({ text, voice });
   };
 
-  const handleVoiceInput = async (kasusId: string, newStatus: "proses" | "selesai") => {
+  const handleVoiceInput = async (
+    kasusId: string,
+    newStatus: "proses" | "selesai"
+  ) => {
     try {
-      const response = await fetch('/api/voice/handle-input', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/voice/handle-input", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kasusId, status: newStatus }),
       });
       const result = await response.json();
@@ -131,10 +138,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       speak("Terjadi kesalahan sistem", "id-ID");
     }
   };
-  
-  
-  
 
+  const isStartingRef = useRef(false);
+  const isRunningRef = useRef(false);
   // === Start/Stop Recognition ===
   const startRecognition = () => {
     if (typeof window === "undefined") return;
@@ -146,41 +152,67 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
+    if (isRunningRef.current || isStartingRef.current) {
+      console.log("Recognition already running/starting - skip start()");
+      return;
     }
+
+    try {
+      recognitionRef.current?.stop?.();
+    } catch {}
+    recognitionRef.current = null;
 
     const rec = new SpeechRecognition();
     rec.continuous = true;
     rec.lang = langRef.current;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
-
+    rec.onstart = () => {
+      isStartingRef.current = false;
+      isRunningRef.current = true;
+      setListening(true);
+    };
+    rec.onend = () => {
+      isRunningRef.current = false;
+      setListening(false);
+      // restart pelan jika diizinkan
+      if (shouldRestartRef.current && document.visibilityState === "visible") {
+        setTimeout(() => {
+          try {
+            rec.start();
+          } catch {
+            startRecognition();
+          }
+        }, 800); // ❗ jeda lebih lama biar tidak bentrok
+      }
+    };
 
     rec.onresult = (event: CustomSpeechRecognitionEvent) => {
       let finalTranscript = "";
       let interimTranscript = "";
-    
+
       const resultsArray = Array.from(
         event.results as unknown as ArrayLike<{
           isFinal: boolean;
           0: { transcript: string };
         }>
       );
-    
+
       for (let i = event.resultIndex; i < resultsArray.length; i++) {
         const r = resultsArray[i];
         if (r.isFinal) finalTranscript += r[0].transcript;
         else interimTranscript += r[0].transcript;
       }
-    
+
       const current = (finalTranscript || interimTranscript).trim();
       setTranscript(current);
       console.log("🎤 Transcript:", current);
-    
+
       if (finalTranscript.trim()) {
-        const command = finalTranscript.toLowerCase().trim().replace(/\s+/g, " ");
+        const command = finalTranscript
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, " ");
         const currentKasusId = activeKasusIdRef.current;
         console.log("🛑 Final command (normalized):", JSON.stringify(command));
         console.log("🎯 activeKasusIdRef:", currentKasusId);
@@ -201,11 +233,13 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-      
     };
-    
-
     rec.onerror = (e: any) => {
+      // 'aborted' sering muncul saat stop/start – abaikan
+      if (e?.error === "aborted") {
+        console.log("⚠️ Recognition aborted (benign).");
+        return;
+      }
       console.warn("SpeechRecognition error:", e?.error || e);
     };
 
@@ -213,7 +247,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       setListening(false);
       if (shouldRestartRef.current && document.visibilityState === "visible") {
         setTimeout(() => {
-          try { rec.start(); } catch {
+          try {
+            rec.start();
+          } catch {
             startRecognition();
           }
         }, 250);
@@ -221,18 +257,21 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     };
 
     try {
+      isStartingRef.current = true;
       rec.start();
-      setListening(true);
       recognitionRef.current = rec;
       shouldRestartRef.current = true;
     } catch (err) {
+      isStartingRef.current = false;
       console.error("Failed to start recognition:", err);
     }
   };
 
   const stopRecognition = () => {
     shouldRestartRef.current = false;
-    try { recognitionRef.current?.stop?.(); } catch {}
+    try {
+      recognitionRef.current?.stop?.();
+    } catch {}
     setListening(false);
   };
 
@@ -265,8 +304,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => {
       shouldRestartRef.current = false;
-      try { recognitionRef.current?.stop?.(); } catch {}
-      try { window.speechSynthesis.cancel(); } catch {}
+      try {
+        recognitionRef.current?.stop?.();
+      } catch {}
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
     };
   }, []);
 

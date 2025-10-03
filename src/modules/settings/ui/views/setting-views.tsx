@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { Shield, Vibrate, Volume2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   CommandResponsiveDialog,
   CommandInput,
@@ -23,7 +22,7 @@ import { useVoice } from "@/modules/voice/voiceProvider";
 import { useLatestKasus } from "@/hooks/use-latest-kasus";
 
 export default function SettingsPage() {
-  const { speak, startListening, setActiveKasusId } = useVoice();
+  const { speak, startListening, setActiveKasusId, stopListening } = useVoice();
   const router = useRouter();
   const [krlDialogOpen, setKrlDialogOpen] = useState(false);
   const {
@@ -66,26 +65,41 @@ export default function SettingsPage() {
     }
   }, [userData]);
 
+  // start mic hanya sekali setelah sound = true
+  const micStartedRef = useRef(false);
   useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        console.log("Mic OK ✅", stream);
+    if (!settings.sound || micStartedRef.current) return;
+    (async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
         startListening("id-ID");
-      })
-      .catch((err) => {
-        console.error("Mic ERROR ❌", err);
-      });
-  }, []); 
+        micStartedRef.current = true;
+        console.log("🎙️ mic started");
+      } catch (e) {
+        console.error("Mic ERROR ❌", e);
+      }
+    })();
+    // ketika sound dimatikan, stop
+    return () => {
+      if (!settings.sound) {
+        stopListening();
+        micStartedRef.current = false;
+      }
+    };
+  }, [settings.sound, startListening, stopListening]);
   
+  const lastKasusIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (kasusData && kasusData.length > 0) {
-      console.log("Kasus Data (latest):", kasusData[0]);
-      setActiveKasusId(kasusData[0].id);
+    if (!kasusData?.length) return;
+    const latestId = kasusData[0].id;
+    if (lastKasusIdRef.current !== latestId) {
+      lastKasusIdRef.current = latestId;
+      setActiveKasusId(latestId);
+      console.log("🔗 activeKasusId set:", latestId);
     }
   }, [kasusData, setActiveKasusId]);
 
-  
+
   // Loading state
   if (userLoading || krlLoading || krlLoading) {
     return (

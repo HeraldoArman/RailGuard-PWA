@@ -390,7 +390,7 @@ export const kasusRouter = createTRPCRouter({
       }
       return removed;
     }),
-  getMany: protectedProcedure
+    getMany: baseProcedure
     .input(
       z.object({
         page: z.number().default(DEFAULT_PAGE),
@@ -432,8 +432,6 @@ export const kasusRouter = createTRPCRouter({
         krlId ? eq(gerbong.krlId, krlId) : undefined,
         gerbongId ? eq(kasus.gerbongId, gerbongId) : undefined,
         search ? ilike(kasus.description, `%${search}%`) : undefined,
-        // Batasi hanya KRL yang terhubung ke user
-        eq(userKrl.userId, ctx.userId.user.id),
       ].filter(Boolean);
 
       const items = await db
@@ -446,16 +444,11 @@ export const kasusRouter = createTRPCRouter({
         .from(kasus)
         .innerJoin(gerbong, eq(kasus.gerbongId, gerbong.id))
         .innerJoin(krl, eq(gerbong.krlId, krl.id))
-        .innerJoin(userKrl, and(eq(userKrl.krlId, krl.id)))
+        // Removed the userKrl join to show all cases regardless of user assignment
         .where(
-          and(
-            ...(whereParts as
-              | [
-                  import("drizzle-orm").SQLWrapper,
-                  ...import("drizzle-orm").SQLWrapper[],
-                ]
-              | [])
-          )
+          whereParts.length > 0
+            ? and(...whereParts as import("drizzle-orm").SQLWrapper[])
+            : undefined
         )
         .orderBy(desc(kasus.reportedAt), desc(kasus.id))
         .limit(pageSize)
@@ -466,16 +459,11 @@ export const kasusRouter = createTRPCRouter({
         .from(kasus)
         .innerJoin(gerbong, eq(kasus.gerbongId, gerbong.id))
         .innerJoin(krl, eq(gerbong.krlId, krl.id))
-        .innerJoin(userKrl, and(eq(userKrl.krlId, krl.id)))
+        // Removed the userKrl join from count query as well
         .where(
-          and(
-            ...(whereParts as
-              | [
-                  import("drizzle-orm").SQLWrapper,
-                  ...import("drizzle-orm").SQLWrapper[],
-                ]
-              | [])
-          )
+          whereParts.length > 0
+            ? and(...(whereParts as import("drizzle-orm").SQLWrapper[]))
+            : undefined
         );
 
       const total = totalRow?.count ?? 0;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState , useEffect} from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,15 +48,16 @@ export const DashboardHistory = () => {
           timeStyle: "short",
         })
       : "-";
-      useEffect(() => {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-          .then((stream) => {
-            console.log("Mic OK ✅", stream);
-          })
-          .catch((err) => {
-            console.error("Mic ERROR ❌", err);
-          });
-      }, []);
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        console.log("Mic OK ✅", stream);
+      })
+      .catch((err) => {
+        console.error("Mic ERROR ❌", err);
+      });
+  }, []);
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-end justify-between gap-2">
@@ -79,7 +80,7 @@ export const DashboardHistory = () => {
             )}
 
             {items.map((k) => (
-              <li key={k.id} className="px-3">
+              <li key={k.id} className="px-3 pb-5 pt-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium leading-tight line-clamp-2">
@@ -213,8 +214,8 @@ export const DashboardHistory = () => {
           {totalPages > 1 && (
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center px-3 py-2 border-t bg-muted/30 text-xs">
               <span className="text-muted-foreground">
-                Menampilkan {items.length} dari {totalLabel} kasus (Hal. {page} /{" "}
-                {totalPages})
+                Menampilkan {items.length} dari {totalLabel} kasus (Hal. {page}{" "}
+                / {totalPages})
               </span>
               <div className="flex items-center gap-1">
                 <button
