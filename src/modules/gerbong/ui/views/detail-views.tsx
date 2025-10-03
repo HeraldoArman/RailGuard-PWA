@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useParams, useRouter } from "next/navigation";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function DetailViews() {
   const params = useParams();
@@ -16,7 +16,7 @@ export default function DetailViews() {
   const gerbongId = params.gerbongID as string;
   const trpc = useTRPC();
   const [isLoading, setIsLoading] = useState(false);
-
+  const imgRef = useRef<HTMLImageElement>(null);
   // Fetch gerbong data
   const { data: gerbong } = useSuspenseQuery(
     trpc.gerbong.getOne.queryOptions({ id: gerbongId })
@@ -31,7 +31,7 @@ export default function DetailViews() {
     })
   );
 
-  const latestKasus = kasusData.items[0]; 
+  const latestKasus = kasusData.items[0];
   const hasActiveCase = gerbong.belum > 0 || gerbong.proses > 0;
 
   // Determine gerbong status
@@ -79,10 +79,10 @@ export default function DetailViews() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/kasus/take', {
-        method: 'POST',
+      const response = await fetch("/api/kasus/take", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           kasusId: latestKasus.id,
@@ -95,17 +95,27 @@ export default function DetailViews() {
         // Navigate to history detail page
         router.push(`/dashboard/histori/${latestKasus.id}`);
       } else {
-        console.error('Failed to take kasus:', result.error);
+        console.error("Failed to take kasus:", result.error);
         // You might want to show a toast notification here
       }
     } catch (error) {
-      console.error('Error taking kasus:', error);
+      console.error("Error taking kasus:", error);
       // You might want to show a toast notification here
     } finally {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    const refreshImage = () => {
+      if (imgRef.current) {
+        imgRef.current.src = `${process.env.AI_URL}/snapshot/replay?t=${Date.now()}`;
+      }
+    };
 
+    const interval = setInterval(refreshImage, 1000); // refresh every second
+
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Main Content */}
@@ -150,14 +160,45 @@ export default function DetailViews() {
 
         {/* Blurred Snapshot */}
         <Card className="bg-card border-border overflow-hidden mb-6">
-          <div className="aspect-video bg-secondary/30 relative flex items-center justify-center">
-            <div className="absolute inset-0 backdrop-blur-3xl bg-secondary/50" />
-            <div className="relative z-10 text-center">
-              <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Visual snapshot (privacy protected)
-              </p>
-            </div>
+          <div className="aspect-video bg-secondary/30 relative">
+            <img
+              ref={imgRef}
+              id="replay"
+              src="https://e570cf82f732.ngrok-free.app/snapshot/replay"
+              alt="Live camera feed"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Fallback if image fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+                const parent = target.parentElement;
+                if (parent && !parent.querySelector(".fallback")) {
+                  const fallback = document.createElement("div");
+                  fallback.className =
+                    "fallback absolute inset-0 backdrop-blur-3xl bg-secondary/50 flex items-center justify-center";
+                  fallback.innerHTML = `
+                    <div class="text-center">
+                      <svg class="w-12 h-12 text-muted-foreground mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                      <p class="text-sm text-muted-foreground">Camera feed unavailable</p>
+                    </div>
+                  `;
+                  parent.appendChild(fallback);
+                }
+              }}
+              onLoad={(e) => {
+                // Show image and hide fallback when it loads successfully
+                const target = e.target as HTMLImageElement;
+                target.style.display = "block";
+                const parent = target.parentElement;
+                const fallback = parent?.querySelector(".fallback");
+                if (fallback) {
+                  fallback.remove();
+                }
+              }}
+            />
           </div>
         </Card>
 
@@ -186,7 +227,9 @@ export default function DetailViews() {
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Gerbong Status</span>
+              <span className="text-sm text-muted-foreground">
+                Gerbong Status
+              </span>
               <span className="text-sm font-medium text-foreground capitalize">
                 {gerbongStatus}
               </span>
@@ -243,11 +286,54 @@ export default function DetailViews() {
           </div>
         </Card>
 
+        <Card className=" border-border p-3 mb-6 text-xs flex flex-wrap gap-4">
+          <div>
+            <span className="font-semibold text-foreground">
+              Max Human Count:
+            </span>{" "}
+            <span className="text-muted-foreground">
+              {latestKasus?.maxHumanCount ?? "-"}
+            </span>
+          </div>
+          <div>
+            <span className="font-semibold text-foreground">
+              Confidence Score:
+            </span>{" "}
+            <span className="text-muted-foreground">
+              {latestKasus?.confidenceScore ?? "-"}
+            </span>
+          </div>
+          <div>
+            <span className="font-semibold text-foreground">
+              Total Inference (s):
+            </span>{" "}
+            <span className="text-muted-foreground">
+              {latestKasus?.totalInferenceSecont ?? "-"}
+            </span>
+          </div>
+          <div>
+            <span className="font-semibold text-foreground">
+              Avg Inference (ms):
+            </span>{" "}
+            <span className="text-muted-foreground">
+              {latestKasus?.averageInferenceMs ?? "-"}
+            </span>
+          </div>
+          <div>
+            <span className="font-semibold text-foreground">Avg FPS:</span>{" "}
+            <span className="text-muted-foreground">
+              {latestKasus?.averageFps ?? "-"}
+            </span>
+          </div>
+        </Card>
+
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
           <div className="max-w-2xl mx-auto">
-            <Button 
+            <Button
               onClick={handleTake}
-              disabled={!latestKasus || latestKasus.status === "selesai" || isLoading}
+              disabled={
+                !latestKasus || latestKasus.status === "selesai" || isLoading
+              }
               className="w-full flex items-center gap-2 bg-primary hover:bg-destructive/90 text-destructive-foreground"
             >
               <Send className="w-4 h-4" />

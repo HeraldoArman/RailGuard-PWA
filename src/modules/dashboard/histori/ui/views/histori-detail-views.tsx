@@ -37,7 +37,7 @@ export const HistoriDetailViews = () => {
   const getCaseTypeColor = (caseType: string) => {
     const colorMap: Record<string, string> = {
       pelecehan: "bg-red-100 text-red-700",
-      prioritas: "bg-purple-100 text-purple-700", 
+      prioritas: "bg-purple-100 text-purple-700",
       pencopetan: "bg-orange-100 text-orange-700",
       keamanan: "bg-blue-100 text-blue-700",
       keributan: "bg-yellow-100 text-yellow-700",
@@ -50,8 +50,6 @@ export const HistoriDetailViews = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-
-
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Case Header */}
@@ -62,12 +60,10 @@ export const HistoriDetailViews = () => {
                 {kasus.name}
               </h2>
               <div className="flex flex-wrap gap-2">
-                <Badge 
-                  className={`${getStatusColor(kasus.status)} border`}
-                >
+                <Badge className={`${getStatusColor(kasus.status)} border`}>
                   {kasus.status?.replace("_", " ").toUpperCase()}
                 </Badge>
-                <Badge 
+                <Badge
                   className={getCaseTypeColor(kasus.caseType || "lainnya")}
                 >
                   {kasus.caseType?.replace("_", " ").toUpperCase()}
@@ -75,7 +71,7 @@ export const HistoriDetailViews = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 gap-3 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
@@ -106,8 +102,8 @@ export const HistoriDetailViews = () => {
           </p>
         </Card>
 
-               {/* Location & Occupancy Info */}
-               <Card className="bg-card border-border p-4">
+        {/* Location & Occupancy Info */}
+        <Card className="bg-card border-border p-4">
           <h3 className="text-sm font-semibold text-foreground mb-4">
             Location & Occupancy
           </h3>
@@ -126,19 +122,16 @@ export const HistoriDetailViews = () => {
             </div>
             {kasus.occupancyLabel && (
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Occupancy Level</span>
+                <span className="text-sm text-muted-foreground">
+                  Occupancy Level
+                </span>
                 <span className="text-sm font-medium text-foreground capitalize">
                   {kasus.occupancyLabel}
-                  {kasus.occupancyValue && ` (${kasus.occupancyValue}%)`}
+                  {kasus.occupancyValue && ` (${kasus.occupancyValue} orang)`}
                 </span>
               </div>
             )}
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Source</span>
-              <span className="text-sm font-medium text-foreground uppercase">
-                {kasus.source}
-              </span>
-            </div>
+
           </div>
         </Card>
 
@@ -156,8 +149,6 @@ export const HistoriDetailViews = () => {
                   {kasus.handlerName || "-"}
                 </span>
               </div>
-
-
             </div>
           </Card>
         )}
@@ -169,7 +160,7 @@ export const HistoriDetailViews = () => {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               {kasus.images.map((imageUrl, index) => (
-                <div 
+                <div
                   key={index}
                   className="aspect-video bg-secondary/30 relative flex items-center justify-center rounded-lg overflow-hidden"
                 >
@@ -198,8 +189,6 @@ export const HistoriDetailViews = () => {
           </Card>
         )}
 
-
-
         {/* Timestamps */}
         <Card className="bg-card border-border p-4">
           <h3 className="text-sm font-semibold text-foreground mb-4">
@@ -216,24 +205,32 @@ export const HistoriDetailViews = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Reported:</span>
-              <span className="font-medium">{formatTime(kasus.reportedAt)}</span>
+              <span className="font-medium">
+                {formatTime(kasus.reportedAt)}
+              </span>
             </div>
             {kasus.acknowledgedAt && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Acknowledged:</span>
-                <span className="font-medium">{formatTime(kasus.acknowledgedAt)}</span>
+                <span className="font-medium">
+                  {formatTime(kasus.acknowledgedAt)}
+                </span>
               </div>
             )}
             {kasus.arrivedAt && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Officer Arrived:</span>
-                <span className="font-medium">{formatTime(kasus.arrivedAt)}</span>
+                <span className="font-medium">
+                  {formatTime(kasus.arrivedAt)}
+                </span>
               </div>
             )}
             {kasus.resolvedAt && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Resolved:</span>
-                <span className="font-medium">{formatTime(kasus.resolvedAt)}</span>
+                <span className="font-medium">
+                  {formatTime(kasus.resolvedAt)}
+                </span>
               </div>
             )}
           </div>
@@ -248,8 +245,18 @@ export const HistoriDetailViews = () => {
               href="/dashboard"
               className="flex flex-col items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               Monitor
             </Link>
@@ -258,8 +265,18 @@ export const HistoriDetailViews = () => {
               className="flex flex-col items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors text-primary bg-primary/10 font-medium"
               aria-current="page"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               History
             </Link>
@@ -267,9 +284,24 @@ export const HistoriDetailViews = () => {
               href="/settings"
               className="flex flex-col items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
               Settings
             </Link>

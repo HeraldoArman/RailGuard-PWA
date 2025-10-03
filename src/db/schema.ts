@@ -1,3 +1,4 @@
+import { float } from "drizzle-orm/mysql-core";
 import {
   pgTable,
   text,
@@ -161,7 +162,11 @@ export const kasus = pgTable(
     images: text("images").array(), // boleh, tapi pertimbangkan tabel media terpisah
     description: text("description").notNull(),
     status: satpamStatusEnum("status").default("belum_ditangani").notNull(),
-
+    maxHumanCount: integer("max_human_count"),
+    confidenceScore: real("confidence_score"),
+    totalInferenceSecont: real("total_inference_second"),
+    averageInferenceMs: real("average_inference_ms"),
+    averageFps: real("average_fps"),
     caseType: caseTypeEnum("case_type").default("lainnya"),
 
     source: caseSourceEnum("source").default("ml").notNull(),

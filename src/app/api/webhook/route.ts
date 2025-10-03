@@ -211,6 +211,12 @@ export async function POST(req: NextRequest) {
           gerbongId: data.gerbong_id,
           status: "belum_ditangani",
           deskripsiKasus: aiDescription || null,
+          maxHumanCount: data.max_human_count,
+          confidenceScore: data.confidence_score,
+          totalInferenceSecont: data.performance.total_inference_seconds,
+          averageInferenceMs: data.performance.average_inference_ms,
+          averageFps: data.performance.average_fps,
+          
         })
         .returning();
 
