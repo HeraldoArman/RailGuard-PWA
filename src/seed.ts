@@ -28,6 +28,13 @@ async function main() {
 
   // Bungkus semua dalam transaction agar konsisten
   await db.transaction(async (tx) => {
+    // Clear existing data first (optional, remove if you want to keep existing data)
+    await tx.delete(kasus);
+    await tx.delete(userKrl);
+    await tx.delete(gerbong);
+    await tx.delete(krl);
+    await tx.delete(user);
+
     // ---------- USERS ----------
     const adminId = nanoid();
     const satpamId = nanoid();
@@ -57,8 +64,7 @@ async function main() {
           emailVerified: false,
           image: null,
         },
-      ])
-      .onConflictDoNothing();
+      ]);
 
     // ---------- KRL ----------
     const krlRedId = nanoid();
@@ -69,8 +75,7 @@ async function main() {
       .values([
         { id: krlRedId, name: "KRL Red Line" },
         { id: krlBlueId, name: "KRL Blue Line" },
-      ])
-      .onConflictDoNothing();
+      ]);
 
     // ---------- GERBONG ----------
     const g1 = nanoid();
@@ -87,7 +92,7 @@ async function main() {
           krlId: krlRedId,
           adaKasus: true,
           totalPenumpang: 120,
-          statusKepadatan: "padat", // lowercase to match enum
+          statusKepadatan: "padat",
         },
         {
           id: g2,
@@ -95,7 +100,7 @@ async function main() {
           krlId: krlRedId,
           adaKasus: false,
           totalPenumpang: 70,
-          statusKepadatan: "sedang", // lowercase to match enum
+          statusKepadatan: "sedang",
         },
         {
           id: g3,
@@ -103,7 +108,7 @@ async function main() {
           krlId: krlBlueId,
           adaKasus: false,
           totalPenumpang: 45,
-          statusKepadatan: "longgar", // lowercase to match enum
+          statusKepadatan: "longgar",
         },
         {
           id: g4,
@@ -111,10 +116,9 @@ async function main() {
           krlId: krlBlueId,
           adaKasus: true,
           totalPenumpang: 95,
-          statusKepadatan: "sedang", // lowercase to match enum
+          statusKepadatan: "sedang",
         }
-      ])
-      .onConflictDoNothing();
+      ]);
 
     // ---------- KASUS ----------
     const ks1 = nanoid();
@@ -125,32 +129,35 @@ async function main() {
       .values([
         {
           id: ks1,
-          name: "Pelecehan Verbal",
-          images: ["https://example.com/img/pelecehan1.jpg"],
+          name: "Kepadatan Berlebih Gerbong 1",
+          images: ["https://example.com/img/kepadatan1.jpg"],
           description:
-            "Laporan pelecehan verbal antar penumpang di dekat pintu masuk.",
+            "Deteksi kepadatan berlebih di gerbong 1 dengan tingkat okupansi tinggi.",
           status: "proses",
-          occupancyLabel: "padat", // lowercase to match enum
+          occupancyLabel: "padat",
           occupancyValue: 85,
-          caseType: "pelecehan", // use valid enum value
+          caseType: "kepadatan",
+          source: "ml",
           gerbongId: g1,
           handlerId: satpamId,
+          deskripsiKasus: "AI mendeteksi kepadatan mencapai 85% dengan distribusi penumpang tidak merata",
         },
         {
           id: ks2,
-          name: "Kepadatan Berlebih",
+          name: "Kepadatan Menumpuk Area Tengah",
           images: [],
           description:
             "Penumpang menumpuk di area tengah gerbong, aliran keluar masuk terganggu.",
           status: "belum_ditangani",
-          occupancyLabel: "sedang", // lowercase to match enum
+          occupancyLabel: "sedang",
           occupancyValue: 65,
-          caseType: "kepadatan", // valid enum value
+          caseType: "kepadatan",
+          source: "sensor",
           gerbongId: g4,
           handlerId: null,
+          deskripsiKasus: "Sensor mendeteksi penumpukan di area tertentu meski okupansi keseluruhan masih sedang",
         },
-      ])
-      .onConflictDoNothing();
+      ]);
 
     // ---------- USER-KRL (Membership & Roles) ----------
     await tx
@@ -161,11 +168,7 @@ async function main() {
         { userId: memberId, krlId: krlRedId},
         { userId: adminId, krlId: krlBlueId},
         { userId: memberId, krlId: krlBlueId },
-      ])
-      .onConflictDoNothing();
-
-    // Contoh update otomatis timestamps untuk beberapa tabel (opsional sanity check)
-    // await tx.update(kasus).set({ updatedAt: new Date() }).where(eq(kasus.id, ks1));
+      ]);
   });
 
   await pool.end();
