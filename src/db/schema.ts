@@ -13,8 +13,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
-
-
 export const caseTypeEnum = pgEnum("case_type", [
   "pelecehan",
   "prioritas",
@@ -23,7 +21,7 @@ export const caseTypeEnum = pgEnum("case_type", [
   "keributan",
   "darurat",
   "lainnya",
-  "kepadatan"
+  "kepadatan",
 ]);
 
 export const kepadatanEnum = pgEnum("kepadatan_label", [
@@ -145,14 +143,13 @@ export const gerbong = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
+    deskripsi: text("deskripsi"),
   },
   (t) => ({
     uxGerbongPerKrl: uniqueIndex("ux_gerbong_per_krl").on(t.krlId, t.name),
     ixKrlId: index("ix_gerbong_krl_id").on(t.krlId),
   })
 );
-
-
 
 export const kasus = pgTable(
   "kasus",
@@ -169,7 +166,6 @@ export const kasus = pgTable(
 
     source: caseSourceEnum("source").default("ml").notNull(),
 
-
     occupancyLabel: kepadatanEnum("occupancy_label"),
     occupancyValue: integer("occupancy_value"),
 
@@ -180,11 +176,10 @@ export const kasus = pgTable(
     arrivedAt: timestamp("arrived_at", { withTimezone: true }),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     resolutionNotes: text("resolution_notes"),
-
+    deskripsiKasus: text("deskripsi_kasus"), // deskripsi tambahan khusus kasus kepadatan dari AI
     gerbongId: text("gerbong_id")
       .notNull()
       .references(() => gerbong.id, { onDelete: "cascade" }),
-
 
     handlerId: text("handler_id").references(() => user.id, {
       onDelete: "set null",
@@ -207,7 +202,6 @@ export const kasus = pgTable(
       t.status
     ),
     ixKasusReportedAt: index("ix_kasus_reported_at").on(t.reportedAt),
-
   })
 );
 export const userKrl = pgTable(

@@ -9,9 +9,6 @@ export default function GlobalVoiceHandler() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    // Initial feedback when component mounts
-    // speak("Sistem voice notification aktif.");
-
     // Setup Server-Sent Events
     eventSourceRef.current = new EventSource('/api/voice/events/stream');
 
@@ -21,9 +18,16 @@ export default function GlobalVoiceHandler() {
         
         if (data.type === 'kasus_event' && data.data.length > 0) {
           data.data.forEach((k: any) => {
-            speak(
-              `Kasus baru di gerbong ${k.gerbongName}. Jenis kasus ${k.caseType}. Deskripsi: ${k.name}`
-            );
+            // Special handling for crowdness cases
+            if (k.caseType === 'kepadatan') {
+              const crowdnessMessage = `Peringatan kepadatan di gerbong ${k.gerbongName}. ${k.description}`;
+              speak(crowdnessMessage);
+            } else {
+              // Regular case announcement
+              speak(
+                `Kasus baru di gerbong ${k.gerbongName}. Jenis kasus ${k.caseType}. Deskripsi: ${k.name}`
+              );
+            }
           });
         }
       } catch (error) {
