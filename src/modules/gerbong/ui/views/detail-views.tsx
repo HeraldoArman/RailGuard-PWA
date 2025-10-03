@@ -5,14 +5,17 @@ import { ChevronLast, Eye, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 export default function DetailViews() {
   const params = useParams();
+  const router = useRouter();
   const gerbongId = params.gerbongID as string;
   const trpc = useTRPC();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch gerbong data
   const { data: gerbong } = useSuspenseQuery(
@@ -28,10 +31,20 @@ export default function DetailViews() {
     })
   );
 
-
-
   const latestKasus = kasusData.items[0]; 
   const hasActiveCase = gerbong.belum > 0 || gerbong.proses > 0;
+
+  // Determine gerbong status
+  const getGerbongStatus = () => {
+    const total = gerbong.totalKasus ?? 0;
+    if (total === 0) return "tak ada masalah";
+    if ((gerbong.belum ?? 0) > 0) return "pending";
+    if ((gerbong.proses ?? 0) > 0) return "on progress";
+    // if there are cases and all are selesai
+    return "completed";
+  };
+
+  const gerbongStatus = getGerbongStatus();
 
   const formatTime = (date: Date | string) => {
     return new Date(date).toLocaleString("id-ID", {
@@ -56,10 +69,42 @@ export default function DetailViews() {
     return confidenceMap[caseType] || confidenceMap.default;
   };
 
-
   const confidence = latestKasus
     ? getConfidenceLevel(latestKasus.caseType || "default")
     : getConfidenceLevel("default");
+
+  // Handle take button click
+  const handleTake = async () => {
+    if (!latestKasus || latestKasus.status === "selesai" || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/kasus/take', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kasusId: latestKasus.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Navigate to history detail page
+        router.push(`/dashboard/histori/${latestKasus.id}`);
+      } else {
+        console.error('Failed to take kasus:', result.error);
+        // You might want to show a toast notification here
+      }
+    } catch (error) {
+      console.error('Error taking kasus:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -141,6 +186,12 @@ export default function DetailViews() {
               </span>
             </div>
             <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Gerbong Status</span>
+              <span className="text-sm font-medium text-foreground capitalize">
+                {gerbongStatus}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Occupancy</span>
               <span className="text-sm font-medium text-foreground capitalize">
                 {latestKasus?.occupancyLabel ||
@@ -192,12 +243,15 @@ export default function DetailViews() {
           </div>
         </Card>
 
-
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
           <div className="max-w-2xl mx-auto">
-            <Button className="w-full flex items-center gap-2 bg-primary hover:bg-destructive/90 text-destructive-foreground">
+            <Button 
+              onClick={handleTake}
+              disabled={!latestKasus || latestKasus.status === "selesai" || isLoading}
+              className="w-full flex items-center gap-2 bg-primary hover:bg-destructive/90 text-destructive-foreground"
+            >
               <Send className="w-4 h-4" />
-              Take
+              {isLoading ? "Processing..." : "Take"}
             </Button>
           </div>
         </div>
