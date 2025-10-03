@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Shield, Bell, Vibrate, Volume2 } from "lucide-react";
+import { Shield, Vibrate, Volume2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
-import { gerbong } from "@/db/schema";
-
+import { useState, useEffect } from "react";
 import {
   CommandResponsiveDialog,
   CommandInput,
@@ -15,42 +13,107 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
-
 import { useRouter } from "next/navigation";
+import { useUserSettings } from "@/hooks/use-user-settings";
+// import { useKrlSummary } from "@/hooks/useKrlSummary";
+import {useKrlSummary} from "@/hooks/userKrlSummary";
+import { useKrlSelection } from "@/hooks/useKrlSelection";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { data, isPending } = authClient.useSession();
+  const [krlDialogOpen, setKrlDialogOpen] = useState(false);
+
+  // Fetch user settings and data
+  const { 
+    data: userData, 
+    isLoading: userLoading, 
+    error: userError, 
+    updateSettings 
+  } = useUserSettings();
+
+  // Fetch KRL summary
+  const { 
+    data: krlData, 
+    isLoading: krlLoading, 
+    error: krlError 
+  } = useKrlSummary();
+
+  // KRL selection
+  const { 
+    activeKrlId, 
+    selectKrl, 
+    isLoading: selectionLoading 
+  } = useKrlSelection();
+
+  // Local settings state
   const [settings, setSettings] = useState({
     status: true,
-    sound: true,
+    sound: false,
   });
-  const [krlDialogOpen, setKrlDialogOpen] = useState(false);
-  const [selectedKrlId, setSelectedKrlId] = useState<string | null>(null);
 
-  const trpc = useTRPC();
-  const { data: krlData } = useSuspenseQuery(
-    trpc.krl.getGerbongSummaryByUser.queryOptions()
-  );
+  // Update local settings when data is loaded
+  useEffect(() => {
+    if (userData?.settings) {
+      setSettings(userData.settings);
+    }
+  }, [userData]);
 
-
-  if (isPending || !data?.user) {
-    return null;
+  // Loading state
+  if (userLoading || krlLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading settings...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Dummy user data (ganti dengan data session / trpc)
+  // Error state
+  if (userError || krlError || !userData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive">
+            Error: {userError || krlError || "Failed to load settings"}
+          </p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="outline" 
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const user = {
-    name: data.user.name,
-    email: data.user.email,
+    name: userData.user.name,
+    email: userData.user.email,
     role: "Petugas Keamanan",
   };
 
-  const toggleSetting = (key: keyof typeof settings) =>
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleSetting = async (key: keyof typeof settings) => {
+    const newSettings = { ...settings, [key]: !settings[key] };
+    
+    try {
+      // Optimistic update
+      setSettings(newSettings);
+      
+      // Update in database
+      await updateSettings(newSettings);
+      
+      toast.success(`${key === 'sound' ? 'Voice activation' : 'Status alerts'} ${newSettings[key] ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      // Revert on error
+      setSettings(settings);
+      toast.error(`Failed to update ${key === 'sound' ? 'voice activation' : 'status alerts'}`);
+    }
+  };
 
   const initials = user.name
     .split(" ")
@@ -59,13 +122,16 @@ export default function SettingsPage() {
     .slice(0, 2)
     .toUpperCase();
 
-  const selectedKrl = krlData.find((k) => k.krlId === selectedKrlId);
+  const selectedKrl = krlData.find((k) => k.krlId === activeKrlId);
 
-  const handleKrlSelect = (krlId: string) => {
-    setSelectedKrlId(krlId);
-    setKrlDialogOpen(false);
-
-    console.log("Selected KRL:", krlId);
+  const handleKrlSelect = async (krlId: string) => {
+    try {
+      await selectKrl(krlId);
+      setKrlDialogOpen(false);
+      toast.success("KRL selected successfully!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to select KRL");
+    }
   };
 
   return (
@@ -118,8 +184,16 @@ export default function SettingsPage() {
                 size="sm"
                 onClick={() => setKrlDialogOpen(true)}
                 className="text-xs text-primary hover:underline whitespace-nowrap"
+                disabled={selectionLoading}
               >
-                Select KRL
+                {selectionLoading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Selecting...
+                  </>
+                ) : (
+                  "Select KRL"
+                )}
               </Button>
             </div>
 
@@ -175,6 +249,7 @@ export default function SettingsPage() {
               key={krl.krlId}
               onSelect={() => handleKrlSelect(krl.krlId)}
               className="flex items-center justify-between"
+              disabled={selectionLoading}
             >
               <div className="flex flex-col gap-1">
                 <span className="font-medium">{krl.krlName}</span>
@@ -183,7 +258,7 @@ export default function SettingsPage() {
                   Bermasalah: {krl.problematicGerbong}
                 </span>
               </div>
-              {selectedKrlId === krl.krlId && (
+              {activeKrlId === krl.krlId && (
                 <Shield className="h-4 w-4 text-primary" />
               )}
             </CommandItem>
@@ -196,14 +271,14 @@ export default function SettingsPage() {
         <div className="max-w-2xl mx-auto px-4 py-2">
           <div className="grid grid-cols-3 gap-2">
             <Link
-              href="/"
+              href="/dashboard"
               className="flex flex-col items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
             >
               <Shield className="w-5 h-5" />
               Monitor
             </Link>
             <Link
-              href="/history"
+              href="/dashboard/history"
               className="flex flex-col items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
             >
               <svg
@@ -222,7 +297,7 @@ export default function SettingsPage() {
               History
             </Link>
             <Link
-              href="/settings"
+              href="/dashboard/settings"
               className="flex flex-col items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors text-primary bg-primary/10 font-medium"
               aria-current="page"
             >

@@ -30,7 +30,7 @@ export default function DetailViews() {
 
 
 
-  const latestKasus = kasusData.items[0]; // Get the most recent case
+  const latestKasus = kasusData.items[0]; 
   const hasActiveCase = gerbong.belum > 0 || gerbong.proses > 0;
 
   const formatTime = (date: Date | string) => {
@@ -64,6 +64,12 @@ export default function DetailViews() {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Main Content */}
+      <header className="max-w-2xl mx-auto px-4 pt-8 pb-2">
+        <h1 className="text-2xl font-bold text-foreground mb-1">
+          {gerbong.name}
+        </h1>
+        <p className="text-base text-muted-foreground">{gerbong.krlName}</p>
+      </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
         {/* Alert Header */}
         {hasActiveCase && (
@@ -186,17 +192,10 @@ export default function DetailViews() {
           </div>
         </Card>
 
-        {/* Action Buttons */}
+
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
-          <div className="max-w-2xl mx-auto grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 border-border hover:bg-secondary bg-transparent"
-            >
-              <ChevronLast className="w-4 h-4" />
-              Skip
-            </Button>
-            <Button className="flex items-center gap-2 bg-primary hover:bg-destructive/90 text-destructive-foreground">
+          <div className="max-w-2xl mx-auto">
+            <Button className="w-full flex items-center gap-2 bg-primary hover:bg-destructive/90 text-destructive-foreground">
               <Send className="w-4 h-4" />
               Take
             </Button>
