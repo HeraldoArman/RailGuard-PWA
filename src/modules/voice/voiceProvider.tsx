@@ -10,7 +10,6 @@ import React, {
   ReactNode,
 } from "react";
 import { useSpeechSynthesis } from "react-speech-kit";
-import { api } from "@/trpc/client";
 
 // ---------------- Types untuk Web Speech API ----------------
 interface CustomSpeechRecognitionEvent extends Event {
@@ -48,10 +47,10 @@ type VoiceContextType = {
   enabled: boolean;
   listening: boolean;
   transcript: string;
-  startListening: (lang?: string) => void; // panggil dari gesture user (klik)
+  startListening: (lang?: string) => void;
   stopListening: () => void;
   speak: (text: string, lang?: string) => void;
-  setActiveKasusId: (id: string | null) => void; // biar gak hardcode
+  setActiveKasusId: (id: string | null) => void;
   activeKasusId: string | null;
 };
 
@@ -65,7 +64,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // refs
   const recognitionRef = useRef<CustomSpeechRecognition | null>(null);
-  const shouldRestartRef = useRef(false); // kontrol auto-restart
+  const shouldRestartRef = useRef(false);
   const langRef = useRef("id-ID");
 
   // === TTS (react-speech-kit) + pengelolaan voices ===
@@ -90,7 +89,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const speak = (text: string, lang = "id-ID") => {
-    // opsional: hentikan suara sebelumnya agar pesan baru langsung bicara
     try { window.speechSynthesis.cancel(); } catch {}
     const voice = voicesReady
       ? voices.find((v) => v.lang === lang) ?? voices.find((v) => v.lang.startsWith(lang.split("-")[0]))
@@ -98,19 +96,37 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     tts({ text, voice });
   };
 
-  // === tRPC mutation kirim hasil STT ===
-  const voiceMutation = api.voice.handleInput.useMutation({
-    onSuccess(data) {
-      // opsional: feedback suara
-      // speak("Diterima. Status diperbarui.");
-      console.log("Voice input processed:", data);
-    },
-    onError(err) {
-      console.error("Voice error:", err);
-      // opsional: feedback user
+  // === Voice input handler (mengganti tRPC mutation) ===
+  const handleVoiceInput = async (kasusId: string, transcript: string) => {
+    try {
+      const response = await fetch('/api/voice/handle-input', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kasusId,
+          transcript,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log("Voice input processed:", result.data);
+        // Optional: speak feedback
+        // speak("Diterima. Status diperbarui.");
+      } else {
+        console.error('Failed to process voice input:', result.error);
+        // Optional: speak error feedback
+        // speak("Maaf, ada kendala mengirim suara.");
+      }
+    } catch (error) {
+      console.error('Error processing voice input:', error);
+      // Optional: speak error feedback
       // speak("Maaf, ada kendala mengirim suara.");
-    },
-  });
+    }
+  };
 
   // === Start/Stop Recognition ===
   const startRecognition = () => {
@@ -123,7 +139,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // hindari multiple instance
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
@@ -155,26 +170,19 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       setTranscript(current);
 
       if (finalTranscript.trim() && activeKasusId) {
-        voiceMutation.mutate({
-          kasusId: activeKasusId,
-          transcript: finalTranscript.trim(),
-        });
+        handleVoiceInput(activeKasusId, finalTranscript.trim());
       }
     };
 
     rec.onerror = (e: any) => {
       console.warn("SpeechRecognition error:", e?.error || e);
-      // beberapa error umum: "no-speech", "aborted", "not-allowed"
-      // biarkan onend menangani auto-restart jika perlu
     };
 
     rec.onend = () => {
       setListening(false);
       if (shouldRestartRef.current && document.visibilityState === "visible") {
-        // jeda sedikit agar tidak tight loop
         setTimeout(() => {
           try { rec.start(); } catch {
-            // kalau gagal start lagi (kadang di mobile), buat instance baru
             startRecognition();
           }
         }, 250);
@@ -197,26 +205,23 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setListening(false);
   };
 
-  // === API publik (dipanggil dari tombol/gesture user) ===
   const startListening = (lang = "id-ID") => {
     langRef.current = lang;
     setEnabled(true);
     startRecognition();
   };
+
   const stopListening = () => {
     setEnabled(false);
     stopRecognition();
   };
 
-  // === Pause/sambung saat visibility berubah (tab background/foreground) ===
   useEffect(() => {
     const onVis = () => {
       if (!enabled) return;
       if (document.visibilityState === "visible") {
-        // lanjut lagi
         startRecognition();
       } else {
-        // stop sementara untuk mengurangi error “no-speech/aborted”
         stopRecognition();
       }
     };
@@ -226,7 +231,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [enabled]);
 
-  // cleanup saat unmount
   useEffect(() => {
     return () => {
       shouldRestartRef.current = false;
@@ -241,7 +245,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         enabled,
         listening,
         transcript,
-        startListening, // panggil dari CTA/gesture (wajib untuk izin mic)
+        startListening,
         stopListening,
         speak,
         activeKasusId,

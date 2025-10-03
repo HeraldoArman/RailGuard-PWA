@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Shield, Vibrate, Volume2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import {
   CommandResponsiveDialog,
   CommandInput,
@@ -16,34 +16,36 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useUserSettings } from "@/hooks/use-user-settings";
 // import { useKrlSummary } from "@/hooks/useKrlSummary";
-import {useKrlSummary} from "@/hooks/userKrlSummary";
+import { useKrlSummary } from "@/hooks/userKrlSummary";
 import { useKrlSelection } from "@/hooks/useKrlSelection";
 import { toast } from "sonner";
+import { useVoice } from "@/modules/voice/voiceProvider";
 
 export default function SettingsPage() {
+  const { speak } = useVoice();
   const router = useRouter();
   const [krlDialogOpen, setKrlDialogOpen] = useState(false);
 
   // Fetch user settings and data
-  const { 
-    data: userData, 
-    isLoading: userLoading, 
-    error: userError, 
-    updateSettings 
+  const {
+    data: userData,
+    isLoading: userLoading,
+    error: userError,
+    updateSettings,
   } = useUserSettings();
 
   // Fetch KRL summary
-  const { 
-    data: krlData, 
-    isLoading: krlLoading, 
-    error: krlError 
+  const {
+    data: krlData,
+    isLoading: krlLoading,
+    error: krlError,
   } = useKrlSummary();
 
   // KRL selection
-  const { 
-    activeKrlId, 
-    selectKrl, 
-    isLoading: selectionLoading 
+  const {
+    activeKrlId,
+    selectKrl,
+    isLoading: selectionLoading,
   } = useKrlSelection();
 
   // Local settings state
@@ -57,7 +59,8 @@ export default function SettingsPage() {
     if (userData?.settings) {
       setSettings(userData.settings);
     }
-  }, [userData]);
+  }, [userData]); 
+
 
   // Loading state
   if (userLoading || krlLoading) {
@@ -79,9 +82,9 @@ export default function SettingsPage() {
           <p className="text-destructive">
             Error: {userError || krlError || "Failed to load settings"}
           </p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            variant="outline" 
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
             className="mt-4"
           >
             Retry
@@ -99,19 +102,25 @@ export default function SettingsPage() {
 
   const toggleSetting = async (key: keyof typeof settings) => {
     const newSettings = { ...settings, [key]: !settings[key] };
-    
+
     try {
       // Optimistic update
       setSettings(newSettings);
-      
+      if (key === "sound" && newSettings[key]) {
+        speak("Voice activation enabled");
+      }
       // Update in database
       await updateSettings(newSettings);
-      
-      toast.success(`${key === 'sound' ? 'Voice activation' : 'Status alerts'} ${newSettings[key] ? 'enabled' : 'disabled'}`);
+
+      toast.success(
+        `${key === "sound" ? "Voice activation" : "Status alerts"} ${newSettings[key] ? "enabled" : "disabled"}`
+      );
     } catch (error) {
       // Revert on error
       setSettings(settings);
-      toast.error(`Failed to update ${key === 'sound' ? 'voice activation' : 'status alerts'}`);
+      toast.error(
+        `Failed to update ${key === "sound" ? "voice activation" : "status alerts"}`
+      );
     }
   };
 
@@ -130,7 +139,9 @@ export default function SettingsPage() {
       setKrlDialogOpen(false);
       toast.success("KRL selected successfully!");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to select KRL");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to select KRL"
+      );
     }
   };
 
@@ -233,7 +244,6 @@ export default function SettingsPage() {
           </Card>
         </section>
       </main>
-
       {/* KRL Selection Dialog */}
       <CommandResponsiveDialog
         open={krlDialogOpen}
@@ -265,8 +275,7 @@ export default function SettingsPage() {
           ))}
         </CommandList>
       </CommandResponsiveDialog>
-
-     \
+      \
     </div>
   );
 }

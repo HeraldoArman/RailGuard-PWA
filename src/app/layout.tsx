@@ -63,10 +63,10 @@ export default function RootLayout({
             {/* <div className="fixed bottom-4 right-4 z-50"> */}
             {/* <PWAInstallButton /> */}
             {/* </div> */}
-            {/* <VoiceProvider> */}
-              {/* <GlobalVoiceHandler /> */}
+            <VoiceProvider>
+              <GlobalVoiceHandler />
               {children}
-            {/* </VoiceProvider> */}
+            </VoiceProvider>
           </body>
         </html>
       </TRPCReactProvider>
