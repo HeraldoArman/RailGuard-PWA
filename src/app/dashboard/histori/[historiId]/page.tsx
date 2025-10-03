@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import DetailViews from '@/modules/gerbong/ui/views/detail-views'
+import { HistoriDetailViews } from '../../../../modules/dashboard/histori/ui/views/histori-detail-views'
 import { LoaderCircle } from 'lucide-react'
 
 const page = () => {
@@ -11,7 +11,7 @@ const page = () => {
         </div>
       }
     >
-      <DetailViews />
+      <HistoriDetailViews />
     </Suspense>
   )
 }

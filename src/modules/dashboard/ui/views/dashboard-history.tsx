@@ -119,7 +119,7 @@ export const DashboardHistory = () => {
 
                 <div className="mt-3 flex justify-end">
                   <Link
-                    href={`/dashboard/gerbong/${k.gerbongId}`}
+                    href={`/dashboard/histori/${k.id}`}
                     className="text-xs font-medium text-primary underline-offset-2 hover:underline"
                     aria-label={`Lihat detail gerbong ${k.gerbongName ?? ""}`}
                   >
@@ -189,7 +189,7 @@ export const DashboardHistory = () => {
                     </td>
                     <td className="px-3 py-2">
                       <Link
-                        href={`/dashboard/gerbong/${k.gerbongId}`}
+                        href={`/dashboard/histori/${k.id}`}
                         className="text-xs text-primary hover:underline underline-offset-2"
                       >
                         Detail

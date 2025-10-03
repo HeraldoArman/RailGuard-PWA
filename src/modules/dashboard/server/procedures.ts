@@ -31,12 +31,12 @@ type SatpamStatus = (typeof satpamStatusValues)[number];
 const caseTypeValues = [
   "pelecehan",
   "prioritas",
-  "pencopetan", 
+  "pencopetan",
   "keamanan",
   "keributan",
   "darurat",
   "lainnya",
-  "kepadatan"
+  "kepadatan",
 ] as const;
 // type CaseType = (typeof caseTypeValues)[number];
 
@@ -200,7 +200,7 @@ export const kasusRouter = createTRPCRouter({
         caseTypes?.length
           ? inArray(
               kasus.caseType,
-              caseTypes.filter((v): v is typeof caseTypeValues[number] =>
+              caseTypes.filter((v): v is (typeof caseTypeValues)[number] =>
                 (caseTypeValues as readonly string[]).includes(v)
               )
             )
@@ -247,22 +247,34 @@ export const kasusRouter = createTRPCRouter({
       return { items, total, totalPages };
     }),
 
-  getOne: baseProcedure
+    getOne: baseProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       const [row] = await db
         .select({
           ...getTableColumns(kasus),
+          // Handler information
+          handlerName: user.name,
+          handlerEmail: user.email,
+          // Gerbong and KRL information
+          gerbongName: gerbong.name,
+          krlId: krl.id,
+          krlName: krl.name,
         })
         .from(kasus)
+        .leftJoin(user, eq(kasus.handlerId, user.id))
+        .leftJoin(gerbong, eq(kasus.gerbongId, gerbong.id))
+        .leftJoin(krl, eq(gerbong.krlId, krl.id))
         .where(eq(kasus.id, input.id))
         .limit(1);
+  
       if (!row) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Kasus not found" });
       }
+  
       return row;
     }),
-    create: protectedProcedure
+  create: protectedProcedure
     .input(
       z.object({
         gerbongId: z.string(),
@@ -326,7 +338,7 @@ export const kasusRouter = createTRPCRouter({
       }
       return removed;
     }),
-    getMany: protectedProcedure
+  getMany: protectedProcedure
     .input(
       z.object({
         page: z.number().default(DEFAULT_PAGE),
@@ -343,14 +355,15 @@ export const kasusRouter = createTRPCRouter({
       })
     )
     .query(async ({ input, ctx }) => {
-      const { page, pageSize, search, status, caseTypes, krlId, gerbongId } = input;
+      const { page, pageSize, search, status, caseTypes, krlId, gerbongId } =
+        input;
 
       const whereParts = [
         status ? eq(kasus.status, status) : undefined,
         caseTypes?.length
           ? inArray(
               kasus.caseType,
-              caseTypes.filter((v): v is typeof caseTypeValues[number] =>
+              caseTypes.filter((v): v is (typeof caseTypeValues)[number] =>
                 [
                   "pelecehan",
                   "prioritas",
@@ -360,15 +373,13 @@ export const kasusRouter = createTRPCRouter({
                   "darurat",
                   "lainnya",
                   "kepadatan",
-                ].includes(v as typeof caseTypeValues[number])
+                ].includes(v as (typeof caseTypeValues)[number])
               )
             )
           : undefined,
         krlId ? eq(gerbong.krlId, krlId) : undefined,
         gerbongId ? eq(kasus.gerbongId, gerbongId) : undefined,
-        search
-          ? ilike(kasus.description, `%${search}%`)
-          : undefined,
+        search ? ilike(kasus.description, `%${search}%`) : undefined,
         // Batasi hanya KRL yang terhubung ke user
         eq(userKrl.userId, ctx.userId.user.id),
       ].filter(Boolean);
