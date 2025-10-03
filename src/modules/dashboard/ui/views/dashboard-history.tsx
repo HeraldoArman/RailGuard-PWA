@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState , useEffect} from "react";
 import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,7 +48,15 @@ export const DashboardHistory = () => {
           timeStyle: "short",
         })
       : "-";
-
+      useEffect(() => {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then((stream) => {
+            console.log("Mic OK ✅", stream);
+          })
+          .catch((err) => {
+            console.error("Mic ERROR ❌", err);
+          });
+      }, []);
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-end justify-between gap-2">

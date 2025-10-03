@@ -66,12 +66,24 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const recognitionRef = useRef<CustomSpeechRecognition | null>(null);
   const shouldRestartRef = useRef(false);
   const langRef = useRef("id-ID");
-
+  const activeKasusIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeKasusIdRef.current = activeKasusId;
+  }, [activeKasusId]);
   // === TTS (react-speech-kit) + pengelolaan voices ===
   const { speak: tts } = useSpeechSynthesis();
   const [voicesReady, setVoicesReady] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+    if (!SpeechRecognition) {
+      console.error("Browser tidak support SpeechRecognition API");
+    } else {
+      console.log("SpeechRecognition API tersedia ✅");
+    }
+  }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const loadVoices = () => {
@@ -96,37 +108,32 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     tts({ text, voice });
   };
 
-  // === Voice input handler (mengganti tRPC mutation) ===
-  const handleVoiceInput = async (kasusId: string, transcript: string) => {
+  const handleVoiceInput = async (kasusId: string, newStatus: "proses" | "selesai") => {
     try {
       const response = await fetch('/api/voice/handle-input', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          kasusId,
-          transcript,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kasusId, status: newStatus }),
       });
-
       const result = await response.json();
-
       if (response.ok && result.success) {
-        console.log("Voice input processed:", result.data);
-        // Optional: speak feedback
-        // speak("Diterima. Status diperbarui.");
+        console.log("✅ Status updated:", result.data);
+        if (result.data.message) {
+          console.log("📢 Server says:", result.data.message);
+          speak(result.data.message, "id-ID");
+        }
       } else {
-        console.error('Failed to process voice input:', result.error);
-        // Optional: speak error feedback
-        // speak("Maaf, ada kendala mengirim suara.");
+        console.error("❌ Update failed:", result.error);
+        speak("Maaf, update status gagal", "id-ID");
       }
-    } catch (error) {
-      console.error('Error processing voice input:', error);
-      // Optional: speak error feedback
-      // speak("Maaf, ada kendala mengirim suara.");
+    } catch (err) {
+      console.error("Voice update error:", err);
+      speak("Terjadi kesalahan sistem", "id-ID");
     }
   };
+  
+  
+  
 
   // === Start/Stop Recognition ===
   const startRecognition = () => {
@@ -150,29 +157,53 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
+
     rec.onresult = (event: CustomSpeechRecognitionEvent) => {
       let finalTranscript = "";
       let interimTranscript = "";
-
+    
       const resultsArray = Array.from(
         event.results as unknown as ArrayLike<{
           isFinal: boolean;
-          0: { transcript: string; confidence: number };
+          0: { transcript: string };
         }>
       );
+    
       for (let i = event.resultIndex; i < resultsArray.length; i++) {
         const r = resultsArray[i];
         if (r.isFinal) finalTranscript += r[0].transcript;
         else interimTranscript += r[0].transcript;
       }
-
+    
       const current = (finalTranscript || interimTranscript).trim();
       setTranscript(current);
+      console.log("🎤 Transcript:", current);
+    
+      if (finalTranscript.trim()) {
+        const command = finalTranscript.toLowerCase().trim().replace(/\s+/g, " ");
+        const currentKasusId = activeKasusIdRef.current;
+        console.log("🛑 Final command (normalized):", JSON.stringify(command));
+        console.log("🎯 activeKasusIdRef:", currentKasusId);
 
-      if (finalTranscript.trim() && activeKasusId) {
-        handleVoiceInput(activeKasusId, finalTranscript.trim());
+        if (command.includes("siap laksanakan") || command === "siap") {
+          if (currentKasusId) {
+            console.log("trigger siap laksanakan");
+            handleVoiceInput(currentKasusId, "proses");
+          } else {
+            speak("Tidak ada kasus aktif yang dipilih");
+          }
+        } else if (command.includes("selesai")) {
+          if (currentKasusId) {
+            console.log("trigger selesai");
+            handleVoiceInput(currentKasusId, "selesai");
+          } else {
+            speak("Tidak ada kasus aktif yang dipilih");
+          }
+        }
       }
+      
     };
+    
 
     rec.onerror = (e: any) => {
       console.warn("SpeechRecognition error:", e?.error || e);

@@ -20,12 +20,17 @@ import { useKrlSummary } from "@/hooks/userKrlSummary";
 import { useKrlSelection } from "@/hooks/useKrlSelection";
 import { toast } from "sonner";
 import { useVoice } from "@/modules/voice/voiceProvider";
+import { useLatestKasus } from "@/hooks/use-latest-kasus";
 
 export default function SettingsPage() {
-  const { speak } = useVoice();
+  const { speak, startListening, setActiveKasusId } = useVoice();
   const router = useRouter();
   const [krlDialogOpen, setKrlDialogOpen] = useState(false);
-
+  const {
+    data: kasusData,
+    isLoading: kasusLoading,
+    error: kasusError,
+  } = useLatestKasus();
   // Fetch user settings and data
   const {
     data: userData,
@@ -59,11 +64,30 @@ export default function SettingsPage() {
     if (userData?.settings) {
       setSettings(userData.settings);
     }
-  }, [userData]); 
+  }, [userData]);
 
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        console.log("Mic OK ✅", stream);
+        startListening("id-ID");
+      })
+      .catch((err) => {
+        console.error("Mic ERROR ❌", err);
+      });
+  }, []); 
+  
+  useEffect(() => {
+    if (kasusData && kasusData.length > 0) {
+      console.log("Kasus Data (latest):", kasusData[0]);
+      setActiveKasusId(kasusData[0].id);
+    }
+  }, [kasusData, setActiveKasusId]);
 
+  
   // Loading state
-  if (userLoading || krlLoading) {
+  if (userLoading || krlLoading || krlLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -107,7 +131,7 @@ export default function SettingsPage() {
       // Optimistic update
       setSettings(newSettings);
       if (key === "sound" && newSettings[key]) {
-        speak("Voice activation enabled");
+        speak("Aktivasi suara diaktifkan", "id-ID");
       }
       // Update in database
       await updateSettings(newSettings);
@@ -275,7 +299,6 @@ export default function SettingsPage() {
           ))}
         </CommandList>
       </CommandResponsiveDialog>
-      \
     </div>
   );
 }
