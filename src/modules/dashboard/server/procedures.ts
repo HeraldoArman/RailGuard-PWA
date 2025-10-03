@@ -92,6 +92,58 @@ export const gerbongRouter = createTRPCRouter({
       return { items: data, total, totalPages };
     }),
 
+  getManyByUser: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().default(DEFAULT_PAGE),
+        pageSize: z
+          .number()
+          .min(MIN_PAGE_SIZE)
+          .max(MAX_PAGE_SIZE)
+          .default(DEFAULT_PAGE_SIZE),
+        search: z.string().optional(),
+        krlId: z.string().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { page, pageSize, search, krlId } = input;
+
+      const whereClauses = [
+        krlId ? eq(gerbong.krlId, krlId) : undefined,
+        search ? ilike(gerbong.name, `%${search}%`) : undefined,
+        eq(userKrl.userId, ctx.userId.user.id),
+      ].filter(Boolean);
+
+      const data = await db
+        .select({
+          ...getTableColumns(gerbong),
+          krlName: krl.name,
+          totalKasus: sql<number>`count(${kasus.id})`,
+          belum: sql<number>`sum(case when ${kasus.status} = 'belum_ditangani' then 1 else 0 end)`,
+          proses: sql<number>`sum(case when ${kasus.status} = 'proses' then 1 else 0 end)`,
+          selesai: sql<number>`sum(case when ${kasus.status} = 'selesai' then 1 else 0 end)`,
+        })
+        .from(gerbong)
+        .innerJoin(userKrl, eq(userKrl.krlId, gerbong.krlId))
+        .leftJoin(krl, eq(gerbong.krlId, krl.id))
+        .leftJoin(kasus, eq(kasus.gerbongId, gerbong.id))
+        .where(and(...(whereClauses as import("drizzle-orm").SQLWrapper[])))
+        .groupBy(gerbong.id, krl.id)
+        .orderBy(desc(gerbong.createdAt ?? gerbong.id), gerbong.name)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+      // Total distinct gerbong matching filter
+      const totalQuery = await db
+        .select({ count: count() })
+        .from(gerbong)
+        .innerJoin(userKrl, eq(userKrl.krlId, gerbong.krlId))
+        .where(and(...(whereClauses as import("drizzle-orm").SQLWrapper[])));
+      const total = totalQuery[0]?.count ?? 0;
+      const totalPages = Math.ceil(total / pageSize);
+
+      return { items: data, total, totalPages };
+    }),
   getOne: baseProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
@@ -247,7 +299,7 @@ export const kasusRouter = createTRPCRouter({
       return { items, total, totalPages };
     }),
 
-    getOne: baseProcedure
+  getOne: baseProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       const [row] = await db
@@ -267,11 +319,11 @@ export const kasusRouter = createTRPCRouter({
         .leftJoin(krl, eq(gerbong.krlId, krl.id))
         .where(eq(kasus.id, input.id))
         .limit(1);
-  
+
       if (!row) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Kasus not found" });
       }
-  
+
       return row;
     }),
   create: protectedProcedure

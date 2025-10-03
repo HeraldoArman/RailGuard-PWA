@@ -10,7 +10,7 @@ export default function DashboardAnalytics() {
   const trpc = useTRPC();
 
   const { data: allGerbong } = useSuspenseQuery(
-    trpc.gerbong.getMany.queryOptions({ page: 1, pageSize: 100 })
+    trpc.gerbong.getManyByUser.queryOptions({ page: 1, pageSize: 100 })
   );
   
   const items = allGerbong.items ?? [];
@@ -25,7 +25,7 @@ export default function DashboardAnalytics() {
   ).length;
 
   const totalGerbong = items.length;
-  const totalKasus = items.reduce((sum, g) => sum + (g.totalKasus ?? 0), 0);
+  const totalKasus = items.reduce((sum, g) => sum + Number(g.totalKasus ?? 0), 0);
 
   const cards = [
     {
@@ -108,7 +108,7 @@ export default function DashboardAnalytics() {
                       <Icon className={`w-5 h-5 ${card.color}`} />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{card.title}</p>
+                      <p className="font-medium text-foregroun  d">{card.title}</p>
                       <p className="text-xs text-muted-foreground">{card.subtitle}</p>
                     </div>
                   </div>
@@ -134,7 +134,7 @@ export default function DashboardAnalytics() {
           
           <Card className="bg-card border-border divide-y">
 
-            <Link href="/history" className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+            <Link href="/dashboard/histori" className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-3">
                 <BarChart3 className="w-5 h-5 text-primary" />
                 <span className="font-medium text-foreground">View History</span>
@@ -146,7 +146,7 @@ export default function DashboardAnalytics() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t border-border">
+      {/* <nav className="fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t border-border">
         <div className="max-w-2xl mx-auto px-4 py-2">
           <div className="grid grid-cols-3 gap-2">
             <Link
@@ -185,7 +185,7 @@ export default function DashboardAnalytics() {
             </Link>
           </div>
         </div>
-      </nav>
+      </nav> */}
     </div>
   );
 }

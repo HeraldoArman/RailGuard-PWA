@@ -4,7 +4,7 @@ import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Train, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
+import { Train, AlertTriangle, CheckCircle2, Shield, Users } from "lucide-react";
 import Link from "next/link";
 
 export const DashboardTrain = () => {
@@ -21,6 +21,19 @@ export const DashboardTrain = () => {
       ...g,
     }))
   );
+
+  const getKepadatanDisplay = (status: string | null | undefined) => {
+    switch (status) {
+      case "longgar":
+        return { label: "Longgar", color: "text-emerald-600", bgColor: "bg-emerald-100" };
+      case "sedang":
+        return { label: "Sedang", color: "text-amber-600", bgColor: "bg-amber-100" };
+      case "padat":
+        return { label: "Padat", color: "text-rose-600", bgColor: "bg-rose-100" };
+      default:
+        return { label: "N/A", color: "text-muted-foreground", bgColor: "bg-muted" };
+    }
+  };
 
   const cards = gerbongAll.map((g) => {
     const normal = g.totalKasus === 0;
@@ -46,6 +59,8 @@ export const DashboardTrain = () => {
         ? AlertTriangle
         : CheckCircle2;
 
+    const kepadatanInfo = getKepadatanDisplay(g.statusKepadatan);
+
     return {
       id: g.id,
       name: g.name,
@@ -59,12 +74,12 @@ export const DashboardTrain = () => {
         proses: g.proses,
         selesai: g.selesai,
       },
-      statusKepadatan: g.statusKepadatan || "unknown",
+      kepadatan: kepadatanInfo,
     };
   });
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className=" bg-background pb-24">
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
         <section>
@@ -81,7 +96,7 @@ export const DashboardTrain = () => {
                   href={`/dashboard/gerbong/${c.id}`}
                   className="group"
                 >
-                  <Card className="bg-card border-border transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+                  <Card className="bg-card border-border transition-all duration-200 hover:shadow-lg">
                     <CardContent className="p-4">
                       {/* Header */}
                       <div className="flex items-center justify-between mb-3">
@@ -90,11 +105,10 @@ export const DashboardTrain = () => {
                           <span className="font-medium text-foreground group-hover:text-primary transition-colors">
                             {c.name}
                           </span>
-                          <Badge variant={c.badgeVariant} className="text-xs">
-                            {/* <Badge variant={c.badgeVariant as any} className="text-xs"> */}
+                          {/* <Badge variant={c.badgeVariant} className="text-xs">
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {c.statusLabel}
-                          </Badge>
+                          </Badge> */}
                         </div>
                       </div>
 
@@ -136,18 +150,21 @@ export const DashboardTrain = () => {
 
                       {/* Footer */}
                       <div className="pt-3 border-t border-border">
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                          <span>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground">
                             KRL:{" "}
                             <span className="font-medium text-foreground">
                               {c.krlName}
                             </span>
                           </span>
-                          <span>
-                            <span className="font-medium text-foreground capitalize">
-                              {c.statusKepadatan}
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            <span
+                              className={`font-medium ${c.kepadatan.color} px-2 py-1 rounded-full text-xs ${c.kepadatan.bgColor}`}
+                            >
+                              {c.kepadatan.label}
                             </span>
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </CardContent>

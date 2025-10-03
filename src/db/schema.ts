@@ -55,6 +55,7 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  isVoiceActive: boolean("is_voice_active").default(false).notNull(),
 });
 
 export const session = pgTable("session", {

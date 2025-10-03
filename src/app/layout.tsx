@@ -4,7 +4,8 @@ import "./globals.css";
 import { TRPCReactProvider } from "@/trpc/client";
 import { Toaster } from "@/components/ui/sonner";
 import { NuqsAdapter } from "nuqs/adapters/next";
-
+import { VoiceProvider } from "@/modules/voice/voiceProvider";
+import GlobalVoiceHandler from "@/modules/voice/globalVoiceHandler";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -60,9 +61,12 @@ export default function RootLayout({
           <body>
             <Toaster />
             {/* <div className="fixed bottom-4 right-4 z-50"> */}
-    {/* <PWAInstallButton /> */}
-  {/* </div> */}
-            {children}
+            {/* <PWAInstallButton /> */}
+            {/* </div> */}
+            {/* <VoiceProvider> */}
+              {/* <GlobalVoiceHandler /> */}
+              {children}
+            {/* </VoiceProvider> */}
           </body>
         </html>
       </TRPCReactProvider>
