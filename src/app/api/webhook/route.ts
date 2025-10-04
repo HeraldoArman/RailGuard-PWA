@@ -158,14 +158,20 @@ export async function POST(req: NextRequest) {
     switch (data.crowdness_level) {
       case "Low Density":
         occupancyLabel = "longgar";
+        occupancyLabel = "sedang";
+        occupancyLabel = "padat";
+        caseType = "kepadatan";
+
         break;
       case "Medium Density":
         occupancyLabel = "sedang";
+        occupancyLabel = "padat";
+
         // Create case for medium density if confidence is high
-        if (data.confidence_score > 0.7) {
+        // if (data.confidence_score > 0.7) {
           caseType = "kepadatan";
           shouldCreateCase = true;
-        }
+        // }
         break;
       case "High Density":
         occupancyLabel = "padat";
@@ -216,11 +222,16 @@ export async function POST(req: NextRequest) {
           totalInferenceSecont: data.performance.total_inference_seconds,
           averageInferenceMs: data.performance.average_inference_ms,
           averageFps: data.performance.average_fps,
-          
+
         })
         .returning();
+      if (createdCase)
+      {
 
-      console.log("Created new crowdness case:", createdCase);
+        console.log("Created new crowdness case:", createdCase);
+      } else {
+        console.error("Failed to create new case");
+      }
     }
 
     // Respond with success

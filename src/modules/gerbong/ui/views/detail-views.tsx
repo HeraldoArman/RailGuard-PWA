@@ -30,7 +30,7 @@ export default function DetailViews() {
       pageSize: 10,
     })
   );
-
+  const NGROK_BASE = "https://unfrightening-fluoric-karrie.ngrok-free.dev";
   const latestKasus = kasusData.items[0];
   const hasActiveCase = gerbong.belum > 0 || gerbong.proses > 0;
 
@@ -108,11 +108,14 @@ export default function DetailViews() {
   useEffect(() => {
     const refreshImage = () => {
       if (imgRef.current) {
-        imgRef.current.src = `${process.env.AI_URL}/snapshot/replay?t=${Date.now()}`;
+        imgRef.current.src = `${NGROK_BASE}/snapshot/replay?t=${Date.now()}`;
       }
     };
 
-    const interval = setInterval(refreshImage, 1000); // refresh every second
+    // Set initial image source
+    refreshImage();
+
+    const interval = setInterval(refreshImage, 4000); // refresh every second
 
     return () => clearInterval(interval);
   }, []);
@@ -164,18 +167,17 @@ export default function DetailViews() {
             <img
               ref={imgRef}
               id="replay"
-              src="https://e570cf82f732.ngrok-free.app/snapshot/replay"
+              src={`${NGROK_BASE}/snapshot/replay?t=${Date.now()}`}
               alt="Live camera feed"
               className="w-full h-full object-cover"
               onError={(e) => {
                 // Fallback if image fails to load
                 const target = e.target as HTMLImageElement;
-                target.style.display = "none";
+                target.style.display = 'none';
                 const parent = target.parentElement;
-                if (parent && !parent.querySelector(".fallback")) {
-                  const fallback = document.createElement("div");
-                  fallback.className =
-                    "fallback absolute inset-0 backdrop-blur-3xl bg-secondary/50 flex items-center justify-center";
+                if (parent && !parent.querySelector('.fallback')) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'fallback absolute inset-0 backdrop-blur-3xl bg-secondary/50 flex items-center justify-center';
                   fallback.innerHTML = `
                     <div class="text-center">
                       <svg class="w-12 h-12 text-muted-foreground mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,9 +193,9 @@ export default function DetailViews() {
               onLoad={(e) => {
                 // Show image and hide fallback when it loads successfully
                 const target = e.target as HTMLImageElement;
-                target.style.display = "block";
+                target.style.display = 'block';
                 const parent = target.parentElement;
-                const fallback = parent?.querySelector(".fallback");
+                const fallback = parent?.querySelector('.fallback');
                 if (fallback) {
                   fallback.remove();
                 }
