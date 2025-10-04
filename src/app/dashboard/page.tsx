@@ -45,7 +45,7 @@ const page = async () => {
             </div>
           }
         >
-          <ErrorBoundary fallback={<div>Error loading analytics</div>}>
+          <ErrorBoundary fallback={<div>Error</div>}>
             <DashboardViews />
           </ErrorBoundary>
         </Suspense>
